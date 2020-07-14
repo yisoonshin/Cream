@@ -1,6 +1,3 @@
-from bokeh.plotting import figure, output_file, show, save, ColumnDataSource
-from bokeh.models.tools import HoverTool
-from bokeh.transform import factor_cmap
 from bokeh.layouts import row
 #from bokeh.palettes import Blues8
 from bokeh.embed import components
@@ -15,6 +12,7 @@ df = pandas.read_csv('simulation_scores.csv')
 multiplier = df['multiplier']
 false_positives = df['false_positives']
 false_negatives = df['false_negatives']
+
 threshold = df['threshold']
 precision = df['precision']
 recall = df['recall']
@@ -35,6 +33,8 @@ p = figure(
     y_axis_label='Count',
     tools="pan,box_select,zoom_in,zoom_out,save,reset"
 )
+
+
 #2nd plot FP vs FN across Threshold Levels
 p2 = figure(
 
