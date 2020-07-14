@@ -158,7 +158,7 @@ def cost_minimization(dataframe, session_folder):
     w_error_min_mult = w_error_min.head().squeeze()['multiplier']
 
     time.sleep(1)
-    print(f'''\nBased on total weighted errors, setting a threshold at {round(w_error_min_mult, 1)} standard deviations 
+    print(f'''\nBased on total weighted errors ({fn_ratio_input} ratio), setting a threshold at {round(w_error_min_mult, 1)} standard deviations 
 above the average magnitude might minimize errors based on the context you provided. 
 
 {w_error_min[['multiplier', 'FP', 'weighted_FN', 'total_weighted_errors', 'f1_score']]}
@@ -182,7 +182,7 @@ As always, we recommend that you take a look at the outputs to make your own jud
     plt.ylabel('Count')
     plt.xlabel('Multiplier')
     ax.get_yaxis().set_major_formatter(plt.FuncFormatter(lambda x, loc: "{:,}".format(int(x))))
-    plt.title('Weighted Errors Across Multipliers')
+    plt.title(f'Weighted Errors Across Multipliers ({fn_ratio_input} FN:FP Ratio)')
     plt.legend()
     plt.savefig(os.path.join(scenario_folder, f'simulated_weighted_errors_{scenario}.png'))
 
@@ -206,7 +206,7 @@ As always, we recommend that you take a look at the outputs to make your own jud
     ax2.get_yaxis().set_major_formatter(plt.FuncFormatter(lambda x, loc: "{:,}".format(int(x))))
     ax2.legend(loc='upper right')
 
-    plt.title('Evaluation Metrics vs Total Weighted Errors Across Multiplier Levels')
+    plt.title(f'Evaluation Metrics vs Total Weighted Errors Across Multiplier Levels ({fn_ratio_input} FN:FP Ratio)')
     plt.savefig(os.path.join(scenario_folder, f'simulated_evaluation_vs_weighted_error_{scenario}.png'))
     print(f'Simulation results have been saved to {scenario_folder}.')
 
@@ -428,7 +428,7 @@ let\'s simulate a range of options.\n''')
     # Create session folder if we haven't already.
     if exploratory_option == 'n':
         session_folder = make_folder()
-    simulations.to_csv(os.path.join(session_folder, 'simulation_standard_results.csv'))
+    simulations.to_csv(os.path.join(session_folder, 'simulation_standard_results.csv'), index=False)
     # Find the first threshold with the highest F1 score.
     # This provides a balanced approach between precision and recall.
     f1_max = simulations[simulations.f1_score == simulations.f1_score.max()].head(1)
