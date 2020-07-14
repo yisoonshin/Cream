@@ -4,6 +4,9 @@ from bokeh.transform import factor_cmap
 from bokeh.palettes import Blues8
 from bokeh.embed import components
 #import libraries for histogram charts
+from bokeh.layouts import gridplot
+import numpy as numpy
+import scripy.special
 #import pandas libary to parse through csv file
 import pandas
 
