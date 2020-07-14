@@ -7,7 +7,20 @@ import pandas as pd
 from matplotlib import pyplot as plt
 import matplotlib.ticker as mtick
 import seaborn as sns
-import webbrowser
+import time
+# import webbrowser <-- if we want to automatically open the files
+
+
+# Declare styling for data viz
+normal_color = '#b3e6ff'
+malicious_color = '#800000'
+fp_color = '#c2c2d6'
+fn_color = '#ff0000'
+precision_color = '#e60000'
+recall_color = '#33ccff'
+f1_color = '#6600cc'
+weighted_fn_color = '#ff9900'
+total_weighted_color = '#00cc44'
 
 
 # Take the user-supplied relative path and read the file as a Pandas DataFrame.
@@ -95,8 +108,8 @@ def confusion_matrix(mal_series, norm_series, threshold):
     true_negatives = len(norm_lst) - false_positives
     false_negatives = len(mal_lst) - true_positives
 
-    precision = (true_positives) / (true_positives + false_positives)
-    recall = (true_positives) / (true_positives + false_negatives)
+    precision = true_positives / (true_positives + false_positives)
+    recall = true_positives / (true_positives + false_negatives)
     f1_score = 2 * (precision * recall) / (precision + recall)
 
     outcome_dict = {
@@ -122,6 +135,82 @@ def monte_carlo(mal_series, norm_series, norm_mean, norm_stddev, mult_lst):
         reset_index().rename(columns={'index': 'multiplier'})
     return eval_df
 
+
+# Create nuanced optimization based on weighting of FN
+def cost_minimization(dataframe, session_folder):
+    # Create a separate folder for each ratio input.
+    scenario = input('Please choose a name for this scenario: ')
+    scenario_folder = os.path.join(session_folder, scenario)
+    if not os.path.isdir(scenario_folder):
+        os.mkdir(scenario_folder)
+        print(f'Created the folder {scenario_folder}.')
+
+    # Ask the user to provide a ratio to weigh FN
+    fn_ratio_input = input('How would you weigh false negatives to false positives? (e.g. 2:1): ')
+    fn_ratio = float(fn_ratio_input.split(':')[0])
+
+    # Calculate weighted false negatives, then sum with false positives.
+    dataframe['weighted_FN'] = dataframe.FN * fn_ratio
+    dataframe['total_weighted_errors'] = dataframe.FP + dataframe.weighted_FN
+
+    # Find the first threshold at which TWE is minimized
+    w_error_min = dataframe[dataframe.total_weighted_errors == dataframe.total_weighted_errors.min()].head(1)
+    w_error_min_mult = w_error_min.head().squeeze()['multiplier']
+
+    time.sleep(1)
+    print(f'''\nBased on total weighted errors, setting a threshold at {round(w_error_min_mult, 1)} standard deviations 
+above the average magnitude might minimize errors based on the context you provided. 
+
+{w_error_min[['multiplier', 'FP', 'weighted_FN', 'total_weighted_errors', 'f1_score']]}
+
+As always, we recommend that you take a look at the outputs to make your own judgement.\n''')
+
+    # Export updated stats.
+    dataframe.to_csv(os.path.join(scenario_folder, f'simulation_weighted_results_{scenario}.csv'),
+                     index=False)
+
+    # Plot weighted + total errors.
+    fig, ax = plt.subplots()
+    fig = plt.gcf()
+    fig.set_size_inches(9, 6)
+    sns.lineplot(x='multiplier', y='FP', data=dataframe, label='false positives', color=fp_color)
+    sns.lineplot(x='multiplier', y='FN', data=dataframe, label='false negatives', color=fn_color)
+    sns.lineplot(x='multiplier', y='weighted_FN', data=dataframe,
+                 label='weighted false negatives', color=weighted_fn_color)
+    sns.lineplot(x='multiplier', y='total_weighted_errors', data=dataframe,
+                 label='total weighted errors', color=total_weighted_color)
+    plt.ylabel('Count')
+    plt.xlabel('Multiplier')
+    ax.get_yaxis().set_major_formatter(plt.FuncFormatter(lambda x, loc: "{:,}".format(int(x))))
+    plt.title('Weighted Errors Across Multipliers')
+    plt.legend()
+    plt.savefig(os.path.join(scenario_folder, f'simulated_weighted_errors_{scenario}.png'))
+
+    # Evaluation Metrics vs Total Weighted Errors
+    fig, ax = plt.subplots()
+    fig = plt.gcf()
+    fig.set_size_inches(9, 6)
+    sns.lineplot(x='multiplier', y='precision', data=dataframe, label='precision', color=precision_color)
+    sns.lineplot(x='multiplier', y='recall', data=dataframe, label='recall', color=recall_color)
+    sns.lineplot(x='multiplier', y='f1_score', data=dataframe, label='f1 score', color=f1_color)
+    ax.set_ylabel('Score')
+    ax.get_yaxis().set_major_formatter(mtick.PercentFormatter(1.0))
+    plt.xlabel('Multiplier')
+    ax.legend(loc='upper left')
+
+    # Secondary axis for total weighted errors
+    ax2 = ax.twinx()
+    sns.lineplot(x='multiplier', y='total_weighted_errors', data=dataframe,
+                 label='total weighted errors', color=total_weighted_color)
+    ax2.set_ylabel('Total Weighted Errors')
+    ax2.get_yaxis().set_major_formatter(plt.FuncFormatter(lambda x, loc: "{:,}".format(int(x))))
+    ax2.legend(loc='upper right')
+
+    plt.title('Evaluation Metrics vs Total Weighted Errors Across Multiplier Levels')
+    plt.savefig(os.path.join(scenario_folder, f'simulated_evaluation_vs_weighted_error_{scenario}.png'))
+    print(f'Simulation results have been saved to {scenario_folder}.')
+
+
 def main():
     if "-q" not in sys.argv[1:]:
         print('''
@@ -134,23 +223,29 @@ def main():
     $$ \__/  |__ $$ |  $$ | __ $$ |_____  __ $$ |  $$ | __ $$ |$$$/ $$ |
     $$    $$//  |$$ |  $$ |/  |$$       |/  |$$ |  $$ |/  |$$ | $/  $$ |
      $$$$$$/ $$/ $$/   $$/ $$/ $$$$$$$$/ $$/ $$/   $$/ $$/ $$/      $$/ 
-     
+    
     "Cash rules everything around me
     CREAM get the money, dollar dollar bill, y'all"
-    - Wu-Tang Clan 
-    
-    Welcome to CREAM! 
+    - Wu-Tang Clan''')
+        # Add delay
+        time.sleep(2)
+        print('''
+    Blue Team problems are ultimately business problems.
+    Is the juice worth the squeeze? 
     
     This tool is meant to help security analysts use threshold-based 
-    anomaly detection in a more data-driven way. Our goal is to help you
-    catch the majority* of malicious outliers without wasting time on
-    false positives, because time is $$$.
+    anomaly detection in a more data-driven way, catching the majority*
+    of malicious outliers while minimizing time wasted on false positives.
     
-    * As with any tool, use with caution - a good threshold is not
-    a license to "set it and forget it"!
+    Because time is $$$.
+    
+    * As with any tool, use with caution;
+    a data-driven threshold is not a license to "set it and forget it"!
     
     Tip: launch with the "-q" flag to skip this prompt.
     ''')
+        # Add some delay
+        time.sleep(1)
 
     print('''Please select the CSV dataset you\'d like to use.
 The dataset should contain these columns:
@@ -163,6 +258,8 @@ The dataset should contain these columns:
     file_path = input('Enter the path of your dataset: ')
     imported_data = file_to_df(file_path)
 
+    time.sleep(1)
+
     print(f'''\nGreat! Here is a preview of your data:
 Imported fields:''')
     # List headers by column index.
@@ -171,9 +268,11 @@ Imported fields:''')
         print(f'{index}: {cols[index]}')
     print(f'Number of records: {len(imported_data.index)}\n')
     # Preview the DataFrame
+    time.sleep(1)
     print(imported_data.head(), '\n')
 
     # Prompt for the metric and source of truth.
+    time.sleep(1)
     metric_col, indicator_col = columns_picker(cols)
     # User self-validation.
     col_check = input('Can you confirm if this is correct? (y/n): ').lower()
@@ -185,6 +284,7 @@ Imported fields:''')
 Generating summary stats now..\n''')
 
     # Generate summary stats.
+    time.sleep(1)
     malicious, normal, data_summary = classification_split(imported_data, metric_col, indicator_col)
     norm_mean = data_summary['normal']['mean']
     norm_stddev = data_summary['normal']['stddev']
@@ -207,7 +307,8 @@ Standard Deviation: {round(mal_stddev,2)}
     # Provide the accuracy metrics of a generic threshold at avg + 3 std deviations
     generic_threshold = confusion_matrix(malicious, normal, threshold_calc(norm_mean, norm_stddev, 3))
 
-    print(f'''\nA threshold at (average + 3x standard deviations) {metric_col} would result in:
+    time.sleep(1)
+    print(f'''A threshold at (average + 3x standard deviations) {metric_col} would result in:
     - True Positives (correctly identified malicious events: {generic_threshold['TP']:,}
     - False Positives (wrongly identified normal events: {generic_threshold['FP']:,}
     - True Negatives (correctly identified normal events: {generic_threshold['TN']:,}
@@ -220,26 +321,27 @@ Standard Deviation: {round(mal_stddev,2)}
 
     # Distribution skew
     if norm_mean >= (data_summary['normal']['median'] * 1.1):
-        print(f'''You may want to be cautious as your normal traffic\'s {metric_col} 
+        time.sleep(1)
+        print(f'''\nYou may want to be cautious as your normal traffic\'s {metric_col} 
 has a long tail towards high values. The median is {round(data_summary['normal']['median'],2)} 
 compared to {round(norm_mean,2)} for the average.''')
 
     if mal_mean < threshold_calc(norm_mean, norm_stddev, 2):
-        print(f'''Warning: you may find it difficult to avoid false positives as the average
+        time.sleep(1)
+        print(f'''\nWarning: you may find it difficult to avoid false positives as the average
 {metric_col} for malicious traffic is under the 95th percentile of the normal traffic.''')
 
     # Prompt if we should generate exploratory data viz for the user.
+    time.sleep(1)
     exploratory_option = input('\nWould you like to export exploratory data visualizations? (y/n): ').lower()
     if exploratory_option == 'y':
         # auto_open = input('Should I open the files automatically in your browser? (y/n): ').lower()
         print('We will create a folder to save these files in.')
         session_folder = make_folder()
+        time.sleep(1)
         print('Generating visualizations..')
 
         # Export a high-level histogram of data distribution
-        normal_color = '#b3e6ff'
-        malicious_color = '#800000'
-
         fig, ax = plt.subplots()
         fig = plt.gcf()
         fig.set_size_inches(9, 6)
@@ -254,7 +356,7 @@ compared to {round(norm_mean,2)} for the average.''')
         ax.get_yaxis().set_major_formatter(plt.FuncFormatter(lambda x, loc: "{:,}".format(int(x))))
         # Annotate where malicious activity lies in case it's really small relative to normal traffic
         plt.annotate('Malicious Activity', xy=(mal_mean, 0),
-                     xytext=(mal_mean, data_summary['malicious']['count'] * .20),
+                     xytext=(mal_mean, data_summary['malicious']['count'] * .50),
                      color='black', arrowprops=dict(width=.25, headlength=3, headwidth=3))
         plt.legend()
         plt.tight_layout()
@@ -286,23 +388,28 @@ compared to {round(norm_mean,2)} for the average.''')
         fig = plt.gcf()
         fig.set_size_inches(9, 6)
         sns.distplot(imported_data.loc[imported_data[indicator_col] == 0, metric_col],
-                     kde=False, bins=100, label='Normal', color=normal_color)
+                     kde=True, bins=100, label='Normal', color=normal_color)
         sns.distplot(imported_data.loc[imported_data[indicator_col] == 1, metric_col],
-                     kde=False, bins=100, label='Malicious', color=malicious_color)
+                     kde=True, bins=100, label='Malicious', color=malicious_color)
         plt.xlabel('Magnitude')
         plt.ylabel('% of Category Observations')
         plt.title('Normal vs Malicious Activity Distribution (% of Group Total)')
         ax.get_xaxis().set_major_formatter(plt.FuncFormatter(lambda x, loc: "{:,}".format(int(x))))
-        ax.get_yaxis().set_major_formatter(mtick.PercentFormatter())
+        ax.get_yaxis().set_major_formatter(mtick.PercentFormatter(1.0))
         plt.axvline(x=threshold_calc(norm_mean, norm_stddev, 3),
                     color='k', linestyle='dashed', linewidth=1, label='3 std dev threshold')
         plt.legend()
         plt.tight_layout()
         plt.savefig(os.path.join(session_folder, 'exploratory_data_probability_density.png'))
 
+        print(f'Exploratory data has been saved to {session_folder}.\n')
+
     # Let's get to the simulations!
-    print('\nInstead of manually experimenting with threshold multipliers, let\'s simulate a range of options.')
+    time.sleep(1)
+    print('''Instead of manually experimenting with threshold multipliers, 
+let\'s simulate a range of options.\n''')
     # Generate list of multipliers to iterate over
+    time.sleep(1)
     mult_start = float(input('Please provide the minimum multiplier you want to start at. We recommend 2: '))
     mult_end = (imported_data[metric_col].max() - data_summary['normal']['mean']) / data_summary['normal']['stddev']
     mult_interval = float(input('Please provide the desired gap between multiplier options: '))
@@ -317,28 +424,26 @@ compared to {round(norm_mean,2)} for the average.''')
     # Run simulations using our multipliers.
     simulations = monte_carlo(malicious, normal, norm_mean, norm_stddev, multipliers)
     print('Done!')
+    time.sleep(1)
     # Create session folder if we haven't already.
     if exploratory_option == 'n':
         session_folder = make_folder()
-    simulations.to_csv(os.path.join(session_folder, 'simulated_standard_results.csv'))
-    # Find the threshold with the highest F1 score.
+    simulations.to_csv(os.path.join(session_folder, 'simulation_standard_results.csv'))
+    # Find the first threshold with the highest F1 score.
     # This provides a balanced approach between precision and recall.
-    f1_max = simulations[simulations.f1_score == simulations.f1_score.max()]
-    print(f'''Based on the F1 score metric, this is an optimal choice:
-{f1_max}
+    f1_max = simulations[simulations.f1_score == simulations.f1_score.max()].head(1)
+    f1_max_mult = f1_max.squeeze()['multiplier']
+    time.sleep(1)
+    print(f'''\nBased on the F1 score metric, setting a threshold at {round(f1_max_mult,1)} standard deviations
+above the average magnitude might provide optimal results.\n''')
+    time.sleep(1)
+    print(f'''{f1_max}
 
-We recommend that you skim the CSV and visualization outputs to sanity check results
-and make your own judgement.
+We recommend that you skim the CSV and visualization outputs to sanity check 
+results and make your own judgement.
 ''')
 
-    # Simulation Visualizations
-    fp_color = '#c2c2d6'
-    fn_color = '#ff0000'
-    precision_color = '#e60000'
-    recall_color = '#33ccff'
-    f1_color = '#6600cc'
-
-    # False Positives vs False Negatives
+    # False Positives vs False Negatives.
     fig, ax = plt.subplots()
     fig = plt.gcf()
     fig.set_size_inches(9, 6)
@@ -351,7 +456,7 @@ and make your own judgement.
     plt.legend()
     plt.savefig(os.path.join(session_folder, 'simulated_FP_vs_FN.png'))
 
-    # Evaluation Metrics
+    # Evaluation Metrics.
     fig, ax = plt.subplots()
     fig = plt.gcf()
     fig.set_size_inches(9, 6)
@@ -360,11 +465,35 @@ and make your own judgement.
     sns.lineplot(x='multiplier', y='f1_score', data=simulations, label='f1 score', color=f1_color)
     plt.ylabel('Score')
     plt.xlabel('Multiplier')
-    ax.get_yaxis().set_major_formatter(mtick.PercentFormatter())
+    ax.get_yaxis().set_major_formatter(mtick.PercentFormatter(1.0))
     plt.title('Evaluation Metrics Across Multiplier Levels')
     plt.legend(loc='lower center')
-    plt.savefig(os.path.join(session_folder, 'simulated_valuation_metrics.png'))
+    plt.savefig(os.path.join(session_folder, 'simulated_evaluation_metrics.png'))
+
+    print(f'Simulation results have been saved to {session_folder}.\n')
+
+    time.sleep(1)
+
+    print('''Error types differ in impact - in the case of security incidents, a false negative, 
+though possibly rarer than false positives, is likely more costly.\n''')
+
+    time.sleep(1)
+
+    print('''For example, downtime suffered from a DDoS attack (lost sales/customers) incurs more 
+loss than time wasted chasing a false positive (labor hours)\n''')
+    time.sleep(1)
+
+    # Receive a command to perform weighting on FN
+    perform_weighting = input('Would you like to try a cost-minimizing approach? (y/n): ').lower()
+    while perform_weighting == 'y':
+        cost_minimization(simulations, session_folder)
+        time.sleep(1)
+        perform_weighting = input('''\nPlease check the outputted files.
+Would you like to run another scenario? (y/n): ''').lower()
 
 
 if __name__ == "__main__":
     main()
+    time.sleep(1)
+    print('\nGood luck catching the bad guys!')
+
