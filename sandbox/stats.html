@@ -1,0 +1,86 @@
+
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+  
+  <head>
+    
+      <meta charset="utf-8">
+      <title>Bokeh Plot</title>
+      
+      
+        
+          
+        
+        
+          
+        <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-2.1.1.min.js" integrity="sha384-kLr4fYcqcSpbuI95brIH3vnnYCquzzSxHPU6XGQCIkQRGJwhg0StNbj1eegrHs12" crossorigin="anonymous"></script>
+        <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.1.1.min.js" integrity="sha384-xIGPmVtaOm+z0BqfSOMn4lOR6ciex448GIKG4eE61LsAvmGj48XcMQZtKcE/UXZe" crossorigin="anonymous"></script>
+        <script type="text/javascript">
+            Bokeh.set_log_level("info");
+        </script>
+        
+      
+      
+    
+  </head>
+  
+  
+  <body>
+    
+      
+        
+          
+          
+            
+              <div class="bk-root" id="28c37764-b6d1-4b24-b75b-113d0831ccbc" data-root-id="1010"></div>
+            
+          
+        
+      
+      
+        <script type="application/json" id="1011">
+          {"4fe7a228-4fea-41ae-b6fc-82e8a5fbe0a5":{"roots":{"references":[{"attributes":{"height":300,"text":"\nNormal vs Malicious Summary (metric = magnitude):\nNormal:\n-----------------------------\nObservations: 86100\nAverage: 5015.62\nStandard Deviation: 2843.19\n\nMalicious:\n-----------------------------\nObservations: 300\nAverage: 25110.47\nStandard Deviation: 1938.8\n\nA threshold at (average + 3x standard deviations) magnitude would result in:\n    - True Positives (correctly identified malicious events: 300\n    - False Positives (wrongly identified normal events: 1,229\n    - True Negatives (correctly identified normal events: 84,871\n    - False Negatives (wrongly identified malicious events: 0\n\n    Accuracy Metrics:\n    - Precision (what % of events above threshold are actually malicious): 19.6%\n    - Recall (what % of malicious events did we catch): 100.0%\n    - F1 Score (blends precision and recall): 32.8%\n\nYou may want to be cautious as your normal traffic's magnitude \nhas a long tail towards high values. The median is 4372.82 \ncompared to 5015.62 for the average.\n","width":800},"id":"1010","type":"Div"}],"root_ids":["1010"]},"title":"Bokeh Application","version":"2.1.1"}}
+        </script>
+        <script type="text/javascript">
+          (function() {
+            var fn = function() {
+              Bokeh.safely(function() {
+                (function(root) {
+                  function embed_document(root) {
+                    
+                  var docs_json = document.getElementById('1011').textContent;
+                  var render_items = [{"docid":"4fe7a228-4fea-41ae-b6fc-82e8a5fbe0a5","root_ids":["1010"],"roots":{"1010":"28c37764-b6d1-4b24-b75b-113d0831ccbc"}}];
+                  root.Bokeh.embed.embed_items(docs_json, render_items);
+                
+                  }
+                  if (root.Bokeh !== undefined) {
+                    embed_document(root);
+                  } else {
+                    var attempts = 0;
+                    var timer = setInterval(function(root) {
+                      if (root.Bokeh !== undefined) {
+                        clearInterval(timer);
+                        embed_document(root);
+                      } else {
+                        attempts++;
+                        if (attempts > 100) {
+                          clearInterval(timer);
+                          console.log("Bokeh: ERROR: Unable to run BokehJS code because BokehJS library is missing");
+                        }
+                      }
+                    }, 10, root)
+                  }
+                })(window);
+              });
+            };
+            if (document.readyState != "loading") fn();
+            else document.addEventListener("DOMContentLoaded", fn);
+          })();
+        </script>
+    
+  </body>
+  
+</html>
