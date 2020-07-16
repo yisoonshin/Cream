@@ -225,7 +225,7 @@ def main():
      $$$$$$/ $$/ $$/   $$/ $$/ $$$$$$$$/ $$/ $$/   $$/ $$/ $$/      $$/ 
     
     "Cash rules everything around me
-    CREAM get the money, dollar dollar bill, y'all"
+    CREAM get the money, dolla dolla bill, y'all"
     - Wu-Tang Clan''')
         # Add delay
         time.sleep(2)
@@ -417,7 +417,7 @@ let\'s simulate a range of options.\n''')
     multipliers = []
     mult_counter = mult_start
     while mult_counter < mult_end:
-        multipliers.append(mult_counter)
+        multipliers.append(round(mult_counter,2))
         mult_counter += mult_interval
     print('Generating simulations..\n')
 
