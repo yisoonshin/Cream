@@ -3,7 +3,6 @@
 
 import sys
 import init
-import creamery
 
 
 def main():
@@ -12,6 +11,7 @@ def main():
         # Ensure dependencies are met
         init.check_dependencies()
         init.title_card()
+    import creamery
     creamery.main()
 
 
