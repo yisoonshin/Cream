@@ -370,7 +370,7 @@ to sanity check results and make your own judgement.
         'right': normal_edge[1:]
     })
 
-    exploratory = figure(plot_width=800, plot_height=600,
+    exploratory = figure(plot_width=800, plot_height=500,
                          title=f'{metric_col.capitalize()} Distribution',
                          x_axis_label=f'{metric_col.capitalize()}',
                          y_axis_label='Observations'
@@ -413,7 +413,7 @@ to sanity check results and make your own judgement.
     bokeh_objects.append(exploratory)
 
     # Zoomed in version
-    overlap_view = figure(plot_width=800, plot_height=600,
+    overlap_view = figure(plot_width=800, plot_height=500,
                           title=f'Overlap Highlight',
                           x_axis_label=f'{metric_col.capitalize()}',
                           y_axis_label='Observations',
@@ -461,7 +461,7 @@ to sanity check results and make your own judgement.
         'right': normal_edge_dense[1:]
     })
 
-    density = figure(plot_width=800, plot_height=600,
+    density = figure(plot_width=800, plot_height=500,
                      title='Probability Density',
                      x_axis_label=f'{metric_col.capitalize()}',
                      y_axis_label='% of Group Total'
@@ -502,10 +502,10 @@ to sanity check results and make your own judgement.
     # False Positives vs False Negatives
     errors = figure(
         plot_width=800,
-        plot_height=600,
+        plot_height=500,
         x_range=(multiplier.min(), multiplier.max()),
         y_range=(0, false_positives.max()),
-        title='False Positives vs False Negatives Across Multiplier Levels',
+        title='False Positives vs False Negatives',
         x_axis_label='Multiplier',
         y_axis_label='Count'
     )
@@ -580,7 +580,7 @@ depending on the relative weight of false negatives to false positives. What doe
                                           ))
 
     evaluation = Figure(plot_width=900,
-                        plot_height=600,
+                        plot_height=550,
                         x_range=(multiplier.min(), multiplier.max()),
                         title='Evaluation Metrics vs Weighted Total Error',
                         x_axis_label='Multiplier',
