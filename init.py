@@ -11,8 +11,7 @@ req_check = [
     'numpy',
     'matplotlib',
     'seaborn',
-    'bokeh',
-    'scipy'
+    'bokeh'
 ]
 
 
