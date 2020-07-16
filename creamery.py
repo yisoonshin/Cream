@@ -15,21 +15,27 @@ from bokeh.io import output_notebook, output_file, show
 from bokeh.models import CustomJS, ColumnDataSource, Range1d, \
     LinearAxis, Div, Arrow, NormalHead, Label, Span, \
     Legend, DataTable, TableColumn, NumberFormatter, NumeralTickFormatter
-from bokeh.plotting import figure, Figure, output_file, show
+from bokeh.plotting import figure, Figure
 from bokeh.models.widgets import Slider
 from bokeh.layouts import row, column, gridplot
 
 # Declare styling for data viz
-normal_color = '#b3e6ff'
-malicious_color = '#800000'
-fp_color = '#c2c2d6'
-fn_color = '#ff0000'
-precision_color = '#e60000'
-recall_color = '#33ccff'
-f1_color = '#6600cc'
-weighted_fn_color = '#ff9900'
-total_weighted_color = '#00cc44'
-
+normal_color = '#74D1EA'
+malicious_color = '#FFA38B'
+fp_color = '#A8C0BB'
+fn_color = '#FA4616'
+precision_color = '#E40046'
+recall_color = '#00C1D4'
+f1_color = '#87037B'
+total_weighted_color = '#00C65E'
+title_font_size = '18pt'
+cell_bg_color = '#DAD9D6'
+cell_bg_alpha = .4
+plot_bg_alpha = .15
+left_border = 40
+right_border = 40
+top_border = 60
+bottom_border = 40
 
 # Read CSV to pandas while performing some error checking
 def file_to_df(path):
@@ -100,14 +106,20 @@ def confusion_matrix(mal_series, norm_series, threshold):
 
 
 # If it doesn't exist, make an app folder to hold any exports.
-def make_folder():
+def make_folder(folder_name):
     home = os.path.expanduser('~')
     # Check if there's an app folder
     app_path = os.path.join(home, 'cream')
     if not os.path.isdir(app_path):
         os.mkdir(app_path)
         print(f'Created app folder at: {app_path}')
-    return app_path
+    session_folder = os.path.join(app_path, folder_name)
+    if not os.path.isdir(session_folder):
+        os.mkdir(session_folder)
+        print(f'Created project folder at: {session_folder}')
+    else:
+        print('This folder already exists.')
+    return session_folder
 
 
 # Generate DataFrame with simulated results of various thresholds.
@@ -233,7 +245,7 @@ This is known as \"Monte Carlo simulation\".\n''')
     # Initialize session name & create app folder if there isn't one.
     time.sleep(1)
     session_name = input('Please provide a name for this project/session: ')
-    app_folder = make_folder()
+    session_folder = make_folder(session_name)
 
     # Generate list of multipliers to iterate over.
     time.sleep(1)
@@ -255,7 +267,7 @@ This is known as \"Monte Carlo simulation\".\n''')
     time.sleep(1)
 
     # Save simulations as CSV for later use.
-    simulation_filepath = os.path.join(app_folder, f'{session_name}_simulation_results.csv')
+    simulation_filepath = os.path.join(session_folder, f'{session_name}_simulation_results.csv')
     simulations.to_csv(simulation_filepath, index=False)
     print(f'Saved results to: {simulation_filepath}')
     # Find the first threshold with the highest F1 score.
@@ -273,6 +285,8 @@ to sanity check results and make your own judgement.
 ''')
 
     # Now for the fun part..generating the visualizations via Bokeh.
+    output_file(os.path.join(session_folder, f'{session_name}_overview.html'))
+
     # List of Bokeh objects to render.
     bokeh_objects = []
 
@@ -356,20 +370,32 @@ to sanity check results and make your own judgement.
         'right': normal_edge[1:]
     })
 
-    exploratory = figure(plot_width=900, plot_height=600,
-                         title=f'{metric_col.capitalize()} Distribution Across Normal vs Malicious Events',
+    exploratory = figure(plot_width=800, plot_height=600,
+                         title=f'{metric_col.capitalize()} Distribution',
                          x_axis_label=f'{metric_col.capitalize()}',
                          y_axis_label='Observations'
                          )
+
+    exploratory.title.text_font_size = title_font_size
+    exploratory.border_fill_color = cell_bg_color
+    exploratory.border_fill_alpha = cell_bg_alpha
+    exploratory.background_fill_color = cell_bg_color
+    exploratory.background_fill_alpha = plot_bg_alpha
+    exploratory.min_border_left = left_border
+    exploratory.min_border_right = right_border
+    exploratory.min_border_top = top_border
+    exploratory.min_border_bottom = bottom_border
 
     exploratory.quad(bottom=0, top=mal_hist_df.metric, left=mal_hist_df.left, right=mal_hist_df.right,
                      legend_label='malicious', fill_color=malicious_color, alpha=.85)
     exploratory.quad(bottom=0, top=norm_hist_df.metric, left=norm_hist_df.left, right=norm_hist_df.right,
                      legend_label='normal', fill_color=normal_color, alpha=.35)
 
-    exploratory.add_layout(Arrow(end=NormalHead(fill_color='black', size=10),
-                                 x_start=mal_mean, y_start=mal_count, x_end=mal_mean, y_end=0))
+    exploratory.add_layout(Arrow(end=NormalHead(fill_color=malicious_color, size=10, line_alpha=0),
+                                 line_color=malicious_color, x_start=mal_mean,
+                                 y_start=mal_count, x_end=mal_mean, y_end=0))
     arrow_label = Label(x=mal_mean, y=mal_count * 1.2, text='Malicious Events')
+
     exploratory.add_layout(arrow_label)
     exploratory.xaxis.formatter = NumeralTickFormatter(format='0,0')
     exploratory.yaxis.formatter = NumeralTickFormatter(format='0,0')
@@ -379,18 +405,31 @@ to sanity check results and make your own judgement.
                   line_dash='dashed', line_width=2)
     exploratory.add_layout(thresh)
 
+    thresh_label = Label(x=norm_mean + (norm_stddev * 3.05), y=400, y_units='screen',
+                         text='3 Std Dev Threshold', text_font_style='bold')
+    exploratory.add_layout(thresh_label)
+
     exploratory.legend.location = "top_right"
     bokeh_objects.append(exploratory)
 
     # Zoomed in version
-    overlap_view = figure(plot_width=900, plot_height=600,
-                          title=f'{metric_col.capitalize()} Distribution Across Normal vs '
-                                'Malicious Events (Zoomed in w/Example Threshold)',
+    overlap_view = figure(plot_width=800, plot_height=600,
+                          title=f'Overlap Highlight',
                           x_axis_label=f'{metric_col.capitalize()}',
                           y_axis_label='Observations',
                           y_range=(0, mal_count * .33),
                           x_range=(norm_mean + (norm_stddev * 2.5), mal_mean + (mal_stddev * 3)),
                           )
+
+    overlap_view.title.text_font_size = title_font_size
+    overlap_view.border_fill_color = cell_bg_color
+    overlap_view.border_fill_alpha = cell_bg_alpha
+    overlap_view.background_fill_color = cell_bg_color
+    overlap_view.background_fill_alpha = plot_bg_alpha
+    overlap_view.min_border_left = left_border
+    overlap_view.min_border_right = right_border
+    overlap_view.min_border_top = top_border
+    overlap_view.min_border_bottom = bottom_border
 
     overlap_view.quad(bottom=0, top=mal_hist_df.metric, left=mal_hist_df.left, right=mal_hist_df.right,
                       legend_label='malicious', fill_color=malicious_color, alpha=.85)
@@ -408,7 +447,7 @@ to sanity check results and make your own judgement.
     bokeh_objects.append(overlap_view)
 
     # Probability Density
-    malicious_hist_dense, malicious_edge_dense = np.histogram(malicious, density=True, bins=100)
+    malicious_hist_dense, malicious_edge_dense = np.histogram(malicious, density=True, bins=33)
     mal_hist_dense_df = pd.DataFrame({
         'metric': malicious_hist_dense,
         'left': malicious_edge_dense[:-1],
@@ -422,11 +461,21 @@ to sanity check results and make your own judgement.
         'right': normal_edge_dense[1:]
     })
 
-    density = figure(plot_width=900, plot_height=600,
-                     title='Probability Density Across Normal vs Malicious Events',
+    density = figure(plot_width=800, plot_height=600,
+                     title='Probability Density',
                      x_axis_label=f'{metric_col.capitalize()}',
                      y_axis_label='% of Group Total'
                      )
+
+    density.title.text_font_size = title_font_size
+    density.border_fill_color = cell_bg_color
+    density.border_fill_alpha = cell_bg_alpha
+    density.background_fill_color = cell_bg_color
+    density.background_fill_alpha = plot_bg_alpha
+    density.min_border_left = left_border
+    density.min_border_right = right_border
+    density.min_border_top = top_border
+    density.min_border_bottom = bottom_border
 
     density.quad(bottom=0, top=mal_hist_dense_df.metric, left=mal_hist_dense_df.left,
                  right=mal_hist_dense_df.right, legend_label='malicious', fill_color=malicious_color, alpha=.85)
@@ -434,7 +483,9 @@ to sanity check results and make your own judgement.
                  right=norm_hist_dense_df.right, legend_label='normal', fill_color=normal_color, alpha=.35)
     density.xaxis.formatter = NumeralTickFormatter(format='0,0')
     density.yaxis.formatter = NumeralTickFormatter(format='0.000%')
+
     density.add_layout(thresh)
+    density.add_layout(thresh_label)
 
     density.legend.location = "top_right"
     bokeh_objects.append(density)
@@ -446,17 +497,28 @@ to sanity check results and make your own judgement.
     precision = simulations.precision
     recall = simulations.recall
     f1_score = simulations.f1_score
+    f1_max = simulations[simulations.f1_score == simulations.f1_score.max()].head(1).squeeze()['multiplier']
 
     # False Positives vs False Negatives
     errors = figure(
-        plot_width=900,
-        plot_height=500,
+        plot_width=800,
+        plot_height=600,
         x_range=(multiplier.min(), multiplier.max()),
-        y_range = (0, false_positives.max()),
+        y_range=(0, false_positives.max()),
         title='False Positives vs False Negatives Across Multiplier Levels',
         x_axis_label='Multiplier',
         y_axis_label='Count'
     )
+
+    errors.title.text_font_size = title_font_size
+    errors.border_fill_color = cell_bg_color
+    errors.border_fill_alpha = cell_bg_alpha
+    errors.background_fill_color = cell_bg_color
+    errors.background_fill_alpha = plot_bg_alpha
+    errors.min_border_left = left_border
+    errors.min_border_right = right_border
+    errors.min_border_top = top_border
+    errors.min_border_bottom = right_border
 
     errors.line(multiplier, false_positives, legend_label='false positives', line_width=2, color=fp_color)
     errors.line(multiplier, false_negatives, legend_label='false negatives', line_width=2, color=fn_color)
@@ -468,7 +530,18 @@ to sanity check results and make your own judgement.
     errors.line(multiplier, f1_score, line_width=2,
                 color=f1_color, legend_label='F1 Score', y_range_name="y2")
 
+    # F1 Score Maximization point
+    f1_thresh = Span(location=f1_max, dimension='height', line_color=f1_color,
+                     line_dash='dashed', line_width=2)
+    f1_label = Label(x=f1_max + .05, y=200, y_units='screen', text=f'F1 Max: {round(f1_max,2)}',
+                     text_font_size='10pt', text_font_style='bold',
+                     text_align='left', text_color=f1_color)
+
+    errors.add_layout(f1_thresh)
+    errors.add_layout(f1_label)
+
     errors.legend.location = "top_right"
+    errors.legend.background_fill_alpha = .5
     bokeh_objects.append(errors)
 
     # False Negative Weighting.
@@ -489,11 +562,18 @@ depending on the relative weight of false negatives to false positives. What doe
     # Now for the weighted errors viz
 
     default_weighting = 10
+    simulations['weighted_FN'] = simulations.FN * default_weighting
+    weighted_fn = simulations.weighted_FN
+    simulations['total_weighted_error'] = simulations.FP + simulations.weighted_FN
+    total_weighted_error = simulations.total_weighted_error
+    twe_min = simulations[simulations.total_weighted_error
+                          == simulations.total_weighted_error.min()].head(1).squeeze()['multiplier']
+
     loss_min = ColumnDataSource(data=dict(w=multiplier,
                                           x=false_positives,
                                           y=false_negatives,
-                                          z=false_negatives * default_weighting,
-                                          a=false_positives + (false_negatives * default_weighting),
+                                          z=weighted_fn,
+                                          a=total_weighted_error,
                                           b=precision,
                                           c=recall,
                                           d=f1_score
@@ -502,10 +582,23 @@ depending on the relative weight of false negatives to false positives. What doe
     evaluation = Figure(plot_width=900,
                         plot_height=600,
                         x_range=(multiplier.min(), multiplier.max()),
+                        title='Evaluation Metrics vs Weighted Total Error',
                         x_axis_label='Multiplier',
                         y_axis_label='Errors')
+
+    evaluation.title.text_font_size = title_font_size
+    evaluation.border_fill_color = cell_bg_color
+    evaluation.border_fill_alpha = cell_bg_alpha
+    evaluation.background_fill_color = cell_bg_color
+    evaluation.background_fill_alpha = plot_bg_alpha
+    evaluation.min_border_left = left_border
+    evaluation.min_border_right = right_border
+    evaluation.min_border_top = top_border
+    evaluation.min_border_bottom = bottom_border
+
     evaluation.line('w', 'a', source=loss_min, line_width=3, line_alpha=0.6,
                     color=total_weighted_color, legend_label='Total Weighted Errors')
+    evaluation.yaxis.formatter = NumeralTickFormatter(format='0,0')
 
     # Evaluation metrics on second right axis.
     evaluation.extra_y_ranges = {"y2": Range1d(start=0, end=1.1)}
@@ -520,9 +613,28 @@ depending on the relative weight of false negatives to false positives. What doe
                     color=f1_color, legend_label='F1 score', y_range_name="y2")
     evaluation.legend.location = "bottom_right"
 
-    handler = CustomJS(args=dict(source=loss_min), code="""
+    slider = Slider(start=1.0, end=1000, value=10, step=.25, title="FN:FP Ratio",
+                    bar_color='#FFD100', height=50, margin=(5, 0, 5, 0))
+
+    twe_thresh = Span(location=twe_min, dimension='height', line_color=total_weighted_color,
+                      line_dash='dashed', line_width=2)
+    twe_label = Label(x=twe_min - .05, y=240, y_units='screen',
+                      text=f'TWE Min: {round(twe_min,2)}',
+                      text_font_size='10pt', text_font_style='bold',
+                      text_align='right', text_color=total_weighted_color)
+    evaluation.add_layout(twe_thresh)
+    evaluation.add_layout(twe_label)
+
+    # Add in same f1 thresh as previous viz
+    evaluation.add_layout(f1_thresh)
+    evaluation.add_layout(f1_label)
+
+    handler = CustomJS(args=dict(source=loss_min,
+                                 thresh=twe_thresh,
+                                 label=twe_label), code="""
        var data = source.data;
        var f = cb_obj.value
+       var w = data['w']
        var x = data['x']
        var y = data['y']
        var z = data['z']
@@ -531,8 +643,22 @@ depending on the relative weight of false negatives to false positives. What doe
           z[i] = Math.round(y[i] * f)
           a[i] = z[i] + x[i]
        }
+       
+       var min_loss = Math.min.apply(null,a)
+       var new_thresh = 0
+       
+       for (var i = 0; i < x.length; i++) {
+       if (a[i] == min_loss) {
+           new_thresh = w[i]
+           thresh.location = new_thresh
+           thresh.change.emit()
+           label.x = new_thresh
+           label.change.emit()
+       }
+    }
        source.change.emit();
     """)
+    slider.js_on_change('value', handler)
 
     # Include DataTable of simulation results
     dt_columns = [
@@ -549,15 +675,11 @@ depending on the relative weight of false negatives to false positives. What doe
     data_table = DataTable(source=loss_min, columns=dt_columns, width=900, height=400,
                            fit_columns=True, reorderable=True, sortable=True)
 
-    slider = Slider(start=1.0, end=200, value=10, step=.25, title="Slider Value")
-    slider.js_on_change('value', handler)
-
     weighting_layout = column(weighting_div, evaluation, slider, data_table)
     bokeh_objects.append(weighting_layout)
 
     # Initialize visualizations in browser
     time.sleep(1.5)
-    output_file('cream.html')
     show(column(bokeh_objects))
 
 
