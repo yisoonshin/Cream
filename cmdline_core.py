@@ -8,8 +8,6 @@ from matplotlib import pyplot as plt
 import matplotlib.ticker as mtick
 import seaborn as sns
 import time
-# import webbrowser <-- if we want to automatically open the files
-
 
 # Declare styling for data viz
 normal_color = '#b3e6ff'
