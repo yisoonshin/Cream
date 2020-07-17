@@ -1,0 +1,86 @@
+
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+  
+  <head>
+    
+      <meta charset="utf-8">
+      <title>CREAM</title>
+      
+      
+        
+          
+        
+        
+          
+        <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-2.1.1.min.js" integrity="sha384-kLr4fYcqcSpbuI95brIH3vnnYCquzzSxHPU6XGQCIkQRGJwhg0StNbj1eegrHs12" crossorigin="anonymous"></script>
+        <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.1.1.min.js" integrity="sha384-xIGPmVtaOm+z0BqfSOMn4lOR6ciex448GIKG4eE61LsAvmGj48XcMQZtKcE/UXZe" crossorigin="anonymous"></script>
+        <script type="text/javascript">
+            Bokeh.set_log_level("info");
+        </script>
+        
+      
+      
+    
+  </head>
+  
+  
+  <body>
+    
+      
+        
+          
+          
+            
+              <div class="bk-root" id="25589cee-01f3-4b4b-9dbe-76c90a62f346" data-root-id="5848"></div>
+            
+          
+        
+      
+      
+        <script type="application/json" id="5849">
+          {"5760a2ff-f64d-4b39-8f27-94d6d23b4a0a":{"roots":{"references":[{"attributes":{"children":[[{"id":"5843"},0,0,1,1],[{"id":"5847"},1,0,1,1]]},"id":"5848","type":"GridBox"},{"attributes":{"children":[{"id":"5844"},{"id":"5846"},{"id":"5845"}]},"id":"5847","type":"Row"},{"attributes":{"height":380,"margin":[80,0,0,40],"text":"\n&lt;div class=\"vertical\"&gt;&lt;/div&gt;\n","width":20},"id":"5846","type":"Div"},{"attributes":{"height":480,"margin":[3,0,0,73],"text":"\n&lt;h1&gt;Summary Statistics&lt;/h1&gt; \n&lt;p&gt;&lt;i&gt;metric = magnitude&lt;/i&gt;&lt;/p&gt;\n\n&lt;table style=\"width:420px; height:160px; vertical-align: center;\"&gt;\n  &lt;tr&gt;\n    &lt;th&gt;Metric&lt;/th&gt;\n    &lt;th&gt;Normal Events&lt;/th&gt;\n    &lt;th&gt;Malicious Events&lt;/th&gt;\n  &lt;/tr&gt;\n  &lt;tr&gt;\n    &lt;td&gt;Observations&lt;/td&gt;\n    &lt;td&gt;86,100&lt;/td&gt;\n    &lt;td&gt;300&lt;/td&gt;\n  &lt;/tr&gt;\n  &lt;tr&gt;\n    &lt;td&gt;Average&lt;/td&gt;\n    &lt;td&gt;5,015.62&lt;/td&gt;\n    &lt;td&gt;25,110.47&lt;/td&gt;\n  &lt;/tr&gt;\n  &lt;tr&gt;\n    &lt;td&gt;Standard Deviation&lt;/td&gt;\n    &lt;td&gt;2,843.19&lt;/td&gt;\n    &lt;td&gt;1,938.80&lt;/td&gt;\n  &lt;/tr&gt;  \n  &lt;tr&gt;\n    &lt;td&gt;Median&lt;/td&gt;\n    &lt;td&gt;2,843.19&lt;/td&gt;\n    &lt;td&gt;1,938.80&lt;/td&gt;\n  &lt;/tr&gt;    \n&lt;/table&gt;\n","width":480},"id":"5844","type":"Div"},{"attributes":{"height":480,"margin":[5,0,0,80],"text":"\n&lt;h1&gt;\"Rule of Thumb\" Hypothetical Threshold&lt;/h1&gt;\n&lt;p&gt;A threshold at the &lt;i&gt;(average + 3x standard deviations)&lt;/i&gt; normal magnitude would result in:&lt;/p&gt;\n&lt;ul&gt;\n    &lt;li&gt;True Positives (correctly identified malicious events: &lt;b&gt;300&lt;/b&gt;&lt;/li&gt;\n    &lt;li&gt;False Positives (wrongly identified normal events: &lt;b&gt;1,229&lt;/b&gt;&lt;/li&gt;\n    &lt;li&gt;True Negatives (correctly identified normal events: &lt;b&gt;84,871&lt;/b&gt;&lt;/li&gt;\n    &lt;li&gt;False Negatives (wrongly identified malicious events: &lt;b&gt;0&lt;/b&gt;&lt;/li&gt;\n&lt;/ul&gt;\n&lt;h3&gt;Accuracy Metrics&lt;/h3&gt;\n&lt;ul&gt;\n    &lt;li&gt;Precision (what % of events above threshold are actually malicious): &lt;b&gt;19.6%&lt;/b&gt;&lt;/li&gt;\n    &lt;li&gt;Recall (what % of malicious events did we catch): &lt;b&gt;100.0%&lt;/b&gt;&lt;/li&gt;\n    &lt;li&gt;F1 Score (blends precision and recall): &lt;b&gt;32.8%&lt;/b&gt;&lt;/li&gt;\n&lt;/ul&gt;\n","width":600},"id":"5845","type":"Div"},{"attributes":{"height":160,"margin":[40,0,0,70],"text":"\n&lt;style&gt;\n\n@font-face {\n    font-family: MontrealBold;\n    src: url(fonts/NeueMontreal-Bold.otf);\n    font-weight: bold;\n}\n\n@font-face {\n    font-family: MontrealLight;\n    src: url(fonts/NeueMontreal-Light.otf);\n}\n\nbody {\n    background-color: #f2ebe6;\n}\n\ntitle_header {\n    font-size: 80px;\n    font-style: bold;\n    font-family: MontrealBold, Helvetica;\n    font-weight: bold;\n    margin-bottom: -200px;\n}\n\nh1 {\n    color: #313596;\n}\n\np {\n    font-size: 12px;\n}\n\nb {\n    color: #58c491;\n}\n\nth, td {\n    text-align:left;\n    padding: 5px;\n}\n\ntr:nth-child(even) {\n    background-color: white;\n    opacity: .7;\n}\n\n.vertical { \n    border-left: 1px solid black; \n    height: 190px; \n        } \n&lt;/style&gt;\n\n    &lt;title_header style=\"text-align:left; color: white;\"&gt;\n        Cream.\n    &lt;/title_header&gt;\n    &lt;p style=\"font-family: MontrealBold, Helvetica;\n    font-size:18px;\n    margin-top: 0px;\n    margin-left: 5px;\"&gt;\n        Time is money, and &lt;b style=\"font-size=18px;\"&gt;\"Cash Rules Everything Around Me\"&lt;/b&gt;.\n    &lt;/p&gt;\n&lt;/div&gt;\n","width":800},"id":"5843","type":"Div"}],"root_ids":["5848"]},"title":"Bokeh Application","version":"2.1.1"}}
+        </script>
+        <script type="text/javascript">
+          (function() {
+            var fn = function() {
+              Bokeh.safely(function() {
+                (function(root) {
+                  function embed_document(root) {
+                    
+                  var docs_json = document.getElementById('5849').textContent;
+                  var render_items = [{"docid":"5760a2ff-f64d-4b39-8f27-94d6d23b4a0a","root_ids":["5848"],"roots":{"5848":"25589cee-01f3-4b4b-9dbe-76c90a62f346"}}];
+                  root.Bokeh.embed.embed_items(docs_json, render_items);
+                
+                  }
+                  if (root.Bokeh !== undefined) {
+                    embed_document(root);
+                  } else {
+                    var attempts = 0;
+                    var timer = setInterval(function(root) {
+                      if (root.Bokeh !== undefined) {
+                        clearInterval(timer);
+                        embed_document(root);
+                      } else {
+                        attempts++;
+                        if (attempts > 100) {
+                          clearInterval(timer);
+                          console.log("Bokeh: ERROR: Unable to run BokehJS code because BokehJS library is missing");
+                        }
+                      }
+                    }, 10, root)
+                  }
+                })(window);
+              });
+            };
+            if (document.readyState != "loading") fn();
+            else document.addEventListener("DOMContentLoaded", fn);
+          })();
+        </script>
+    
+  </body>
+  
+</html>
