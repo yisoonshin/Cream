@@ -2,23 +2,21 @@
 
 
 import sys
-import os
 import time
 import pandas as pd
 import numpy as np
-from matplotlib import pyplot as plt
-import matplotlib.ticker as mtick
-import seaborn as sns
 import play_a_game
 
-from bokeh.io import output_notebook, output_file, show
+from bokeh.io import output_notebook, output_file, show, curdoc
 from bokeh.models import CustomJS, ColumnDataSource, Range1d, \
     LinearAxis, Div, Arrow, NormalHead, Label, Span, \
     Legend, DataTable, TableColumn, NumberFormatter, NumeralTickFormatter
 from bokeh.plotting import figure, Figure
 from bokeh.models.widgets import Slider
 from bokeh.layouts import row, column, gridplot, grid
-#tools for create/launch html file
+from bokeh.themes import built_in_themes
+
+# tools for creating/launching html file
 from bokeh.resources import CDN
 from bokeh.embed import file_html
 import webbrowser, os
@@ -33,14 +31,15 @@ precision_color = '#E40046'
 recall_color = '#00C1D4'
 f1_color = '#87037B'
 total_weighted_color = '#00C65E'
-title_font_size = '18pt'
-cell_bg_color = '#DAD9D6'
-cell_bg_alpha = .4
-plot_bg_alpha = .15
-left_border = 40
+title_font_size = '14pt'
+cell_bg_color = '#e5cec0'
+cell_bg_alpha = .75
+plot_bg_alpha = .3
+left_border = 80
 right_border = 40
-top_border = 60
-bottom_border = 40
+top_border = 70
+bottom_border = 60
+
 
 # Read CSV to pandas while performing some error checking
 def file_to_df(path):
@@ -290,66 +289,119 @@ to sanity check results and make your own judgement.
 ''')
 
     # Now for the fun part..generating the visualizations via Bokeh.
-    output_file(os.path.join(session_folder, f'{session_name}_overview.html'))
 
     # List of Bokeh objects to render.
     bokeh_objects = []
+
+    # Header & internal CSS.
+    title_text = '''
+    <style>
+
+    @font-face {
+        font-family: MontrealBold;
+        src: url(fonts/NeueMontreal-Bold.otf);
+        font-weight: bold;
+    }
+
+    @font-face {
+        font-family: MontrealLight;
+        src: url(fonts/NeueMontreal-Light.otf);
+    }
+
+    body {
+        background-color: #f2ebe6;
+    }
+
+    title_header {
+        font-size: 80px;
+        font-style: bold;
+        font-family: MontrealBold, Helvetica;
+        font-weight: bold;
+        margin-bottom: -200px;
+    }
+
+    h1 {
+        color: #313596;
+    }
+
+    p {
+        font-size: 12px;
+    }
+
+    b {
+        color: #58c491;
+    }
+
+    th, td {
+        text-align:left;
+        padding: 5px;
+    }
+
+    tr:nth-child(even) {
+        background-color: white;
+        opacity: .7;
+    }
+
+    .vertical { 
+        border-left: 1px solid black; 
+        height: 190px; 
+            } 
+    </style>
+
+        <title_header style="text-align:left; color: #d4bfa8;">
+            Cream.
+        </title_header>
+        <p style="font-family: MontrealBold, Helvetica;
+        font-size:18px;
+        margin-top: 0px;
+        margin-left: 5px;">
+            Time is money, and <b style="font-size=18px;">"Cash Rules Everything Around Me"</b>.
+        </p>
+    </div>
+    '''
+
+    title_div = Div(text=title_text, width=800, height=160, margin=(40, 0, 0, 70))
+    bokeh_objects.append(title_div)
 
     # Summary stats from earlier.
     summary_text = f'''
     <h1>Results Overview</h1> 
     <i>metric = magnitude</i>
 
-    <table style="width:100%,text-align: right">
+    <table style="width:100%">
       <tr>
-        <th style="text-align:left">Metric</th>
-        <th style="text-align:left">Normal Events</th>
-        <th style="text-align:left">Malicious Events</th>
+        <th>Metric</th>
+        <th>Normal Events</th>
+        <th>Malicious Events</th>
       </tr>
       <tr>
-        <td style="text-align:left">Observations</td>
-        <td style="text-align:left">{norm_count:,}</td>
-        <td style="text-align:left">{mal_count:,}</td>
+        <td>Observations</td>
+        <td>{norm_count:,}</td>
+        <td>{mal_count:,}</td>
       </tr>
       <tr>
-        <td style="text-align:left">Average</td>
-        <td style="text-align:left">{round(norm_mean, 2):,}</td>
-        <td style="text-align:left">{round(mal_mean, 2):,}</td>
+        <td>Average</td>
+        <td>{round(norm_mean, 2):,}</td>
+        <td>{round(mal_mean, 2):,}</td>
       </tr>
       <tr>
-        <td style="text-align:left">Median</td>
-        <td style="text-align:left">{round(norm_median, 2):,}</td>
-        <td style="text-align:left">{round(mal_median, 2):,}</td>
+        <td>Median</td>
+        <td>{round(norm_median, 2):,}</td>
+        <td>{round(mal_median, 2):,}</td>
       </tr> 
       <tr>
-        <td style="text-align:left">Standard Deviation</td>
-        <td style="text-align:left">{round(norm_stddev, 2):,}</td>
-        <td style="text-align:left">{round(mal_stddev, 2):,}</td>
+        <td>Standard Deviation</td>
+        <td>{round(norm_stddev, 2):,}</td>
+        <td>{round(mal_stddev, 2):,}</td>
       </tr> 
     </table>
     '''
-    title_text = '''
-    <style>
-    custom_1 {
-    color: #EACBBB;
-    font-size: 80px;
-    font-style: bold;
-    font-family: "Helvetica Neue", Helvetica, Roboto, sans-serif;
-    font-weight: 700;
-    }
-    </style>
-    <custom_1>Cream.</custom_1>
-    '''
-    title_div = Div(text=title_text, width=800, height=80, margin=(10,0,50,65))
-    bokeh_objects.append(title_div)
 
-
-    summary_div = Div(text=summary_text, width=900, height=200, align='start', margin=(0, -500, 0, 70))
-    bokeh_objects.append(summary_div)
+    summary_div = Div(text=summary_text, width=470, height=320, margin=(3, 0, -70, 73))
 
     # Results of the hypothetical threshold.
     hypothetical = f'''
-    <h2>"Rule of thumb" hypothetical</h2>
+    <h1>"Rule of thumb" hypothetical</h1>
     <p>A threshold at <i>(average + 3x standard deviations)</i> {metric_col} would result in:</p>
     <ul>
         <li>True Positives (correctly identified malicious events: 
@@ -372,8 +424,15 @@ to sanity check results and make your own judgement.
     </ul>
     '''
 
-    hypo_div = Div(text=hypothetical, width=900, height=350, margin=(5,0,0,-600))
-    bokeh_objects.append(hypo_div)
+    hypo_div = Div(text=hypothetical, width=600, height=320, margin=(5, 0, -70, 95))
+
+    line = '''
+    <div class="vertical"></div>
+    '''
+
+    vertical_line = Div(text=line, width=20, height=320, margin=(80, 0, -70, -10))
+
+    bokeh_objects.append(row(summary_div, vertical_line, hypo_div))
 
     # Let's get the exploratory charts generated.
 
@@ -391,7 +450,7 @@ to sanity check results and make your own judgement.
         'right': normal_edge[1:]
     })
 
-    exploratory = figure(plot_width=800, plot_height=500, sizing_mode='scale_width',
+    exploratory = figure(plot_width=600, plot_height=480, sizing_mode='scale_width',
                          title=f'{metric_col.capitalize()} Distribution',
                          x_axis_label=f'{metric_col.capitalize()}',
                          y_axis_label='Observations'
@@ -434,7 +493,7 @@ to sanity check results and make your own judgement.
     bokeh_objects.append(exploratory)
 
     # Zoomed in version
-    overlap_view = figure(plot_width=800, plot_height=500, sizing_mode='scale_width',
+    overlap_view = figure(plot_width=600, plot_height=480, sizing_mode='scale_width',
                           title=f'Overlap Highlight',
                           x_axis_label=f'{metric_col.capitalize()}',
                           y_axis_label='Observations',
@@ -651,7 +710,6 @@ depending on the relative weight of false negatives to false positives. What doe
     evaluation.add_layout(f1_thresh)
     evaluation.add_layout(f1_label)
 
-
     handler = CustomJS(args=dict(source=loss_min,
                                  thresh=twe_thresh,
                                  label=twe_label), code="""
@@ -699,7 +757,7 @@ depending on the relative weight of false negatives to false positives. What doe
     data_table = DataTable(source=loss_min, columns=dt_columns, width=900, height=400,
                            fit_columns=True, reorderable=True, sortable=True)
 
-    weighting_layout = column([weighting_div, evaluation, slider, data_table], sizing_mode='stretch_width')
+    weighting_layout = column([weighting_div, evaluation, slider, data_table])
     bokeh_objects.append(weighting_layout)
 
     # Initialize visualizations in browser
@@ -708,16 +766,20 @@ depending on the relative weight of false negatives to false positives. What doe
 
     l = grid([
         [bokeh_objects[0]],
-        bokeh_objects[1:3],
-        bokeh_objects[3:5],
-        bokeh_objects[5:7],
-        [bokeh_objects[7]]
+        [bokeh_objects[1]],
+        [row(exploratory,overlap_view)] #,
+        #bokeh_objects[4:6],
+        #[bokeh_objects[6]]
     ])
     #show(column(bokeh_objects))
     #show(l)
     html = file_html(l, CDN, "CREAM")
-    with open("render.html", "w") as file:
+    with open(os.path.join(session_folder, f'{session_name}_overview.html'), "w") as file:
         file.write(html)
-    webbrowser.open("file://" + os.path.realpath("render.html"))
+    webbrowser.open("file://" + os.path.join(session_folder, f'{session_name}_overview.html'))
+
+
+if __name__ == "__main__":
+    main()
 
 
