@@ -17,7 +17,7 @@ from bokeh.layouts import row, column, gridplot, grid
 from bokeh.themes import built_in_themes
 
 # tools for creating/launching html file
-from bokeh.resources import CDN
+from bokeh.resources import CDN, INLINE
 from bokeh.embed import file_html
 import webbrowser, os
 
@@ -910,7 +910,7 @@ depending on the relative weight of false negatives to false positives. What doe
 
     #show(column(bokeh_objects))
     #show(l)
-    html = file_html(l, CDN, "CREAM")
+    html = file_html(l, INLINE, "CREAM")
     with open("render.html", "w") as file:
         file.write(html)
     webbrowser.open("file://" + os.path.realpath("render.html"))
