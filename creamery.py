@@ -2,23 +2,21 @@
 
 
 import sys
-import os
 import time
 import pandas as pd
 import numpy as np
-from matplotlib import pyplot as plt
-import matplotlib.ticker as mtick
-import seaborn as sns
 import play_a_game
 
-from bokeh.io import output_notebook, output_file, show
+from bokeh.io import output_notebook, output_file, show, curdoc
 from bokeh.models import CustomJS, ColumnDataSource, Range1d, \
     LinearAxis, Div, Arrow, NormalHead, Label, Span, \
     Legend, DataTable, TableColumn, NumberFormatter, NumeralTickFormatter
 from bokeh.plotting import figure, Figure
-from bokeh.models.widgets import Slider
+from bokeh.models.widgets import Slider, TextInput
 from bokeh.layouts import row, column, gridplot, grid
-#tools for create/launch html file
+from bokeh.themes import built_in_themes
+
+# tools for creating/launching html file
 from bokeh.resources import CDN
 from bokeh.embed import file_html
 import webbrowser, os
@@ -28,19 +26,23 @@ import webbrowser, os
 normal_color = '#74D1EA'
 malicious_color = '#FFA38B'
 fp_color = '#A8C0BB'
-fn_color = '#FA4616'
-precision_color = '#E40046'
-recall_color = '#00C1D4'
-f1_color = '#87037B'
-total_weighted_color = '#00C65E'
-title_font_size = '18pt'
-cell_bg_color = '#DAD9D6'
-cell_bg_alpha = .4
-plot_bg_alpha = .15
-left_border = 40
+fn_color = '#f3b8c0'
+precision_color = '#f3838b'
+recall_color = '#305db5'
+f1_color = '#8d6295'
+total_weighted_color = '#deb36c'
+title_font_size = '14pt'
+# cell_bg_color = '#e7e7e9'
+cell_bg_color = '#FFFFFF'
+cell_bg_alpha = .35
+plot_bg_alpha = .85
+left_border = 80
 right_border = 40
 top_border = 60
-bottom_border = 40
+bottom_border = 60
+plot_width = 700
+plot_height = 500
+
 
 # Read CSV to pandas while performing some error checking
 def file_to_df(path):
@@ -136,6 +138,14 @@ def monte_carlo(mal_series, norm_series, norm_mean, norm_stddev, mult_lst):
     eval_df = pd.DataFrame.from_dict(evaluations, orient='index'). \
         reset_index().rename(columns={'index': 'multiplier'})
     return eval_df
+
+
+def sigma_ref(fig, mean, stddev):
+    for i in range(0, 20):
+        fig.add_layout(Span(location=mean + (stddev * i), dimension='height', line_color='#9ca49c',
+                            line_dash='dotted', line_width=1, line_alpha=.9))
+        fig.add_layout(Label(x=mean + (stddev * i), x_offset=.075, y=180, y_units='screen',
+                             text=f'{i}σ', text_color='#9ca49c', text_font_size='10pt'))
 
 
 def main():
@@ -245,7 +255,7 @@ compared to {round(norm_mean, 2)} for the average.''')
     time.sleep(1)
     print('''\nInstead of manually experimenting with threshold multipliers, 
 let\'s simulate a range of options and see what produces the best result. 
-This is known as \"Monte Carlo simulation\".\n''')
+This is similar to what is known as \"Monte Carlo simulation\".\n''')
 
     # Initialize session name & create app folder if there isn't one.
     time.sleep(1)
@@ -290,66 +300,120 @@ to sanity check results and make your own judgement.
 ''')
 
     # Now for the fun part..generating the visualizations via Bokeh.
-    output_file(os.path.join(session_folder, f'{session_name}_overview.html'))
 
     # List of Bokeh objects to render.
     bokeh_objects = []
+
+    # Header & internal CSS.
+    title_text = '''
+    <style>
+
+    @font-face {
+        font-family: MontrealBold;
+        src: url(fonts/NeueMontreal-Bold.otf);
+        font-weight: bold;
+    }
+
+    @font-face {
+        font-family: MontrealLight;
+        src: url(fonts/NeueMontreal-Light.otf);
+    }
+
+    body {
+        background-color: #f2ebe6;
+    }
+
+    title_header {
+        font-size: 80px;
+        font-style: bold;
+        font-family: MontrealBold, Helvetica;
+        font-weight: bold;
+        margin-bottom: -200px;
+    }
+
+    h1, h3 {
+        font-family: MontrealBold, Helvetica;
+        color: #313596;
+    }
+
+    p {
+        font-size: 12px;
+    }
+
+    b {
+        color: #58c491;
+    }
+
+    th, td {
+        text-align:left;
+        padding: 5px;
+    }
+
+    tr:nth-child(even) {
+        background-color: white;
+        opacity: .7;
+    }
+
+    .vertical { 
+        border-left: 1px solid black; 
+        height: 190px; 
+            } 
+    </style>
+
+        <title_header style="text-align:left; color: white;">
+            Cream.
+        </title_header>
+        <p style="font-family: MontrealBold, Helvetica;
+        font-size:18px;
+        margin-top: 0px;
+        margin-left: 5px;">
+            Because time is money, and <b style="font-size=18px;">"Cash Rules Everything Around Me"</b>.
+        </p>
+    </div>
+    '''
+
+    title_div = Div(text=title_text, width=800, height=160, margin=(40, 0, 0, 70))
+    bokeh_objects.append(title_div)
 
     # Summary stats from earlier.
     summary_text = f'''
     <h1>Results Overview</h1> 
     <i>metric = magnitude</i>
 
-    <table style="width:100%,text-align: right">
+    <table style="width:100%">
       <tr>
-        <th style="text-align:left">Metric</th>
-        <th style="text-align:left">Normal Events</th>
-        <th style="text-align:left">Malicious Events</th>
+        <th>Metric</th>
+        <th>Normal Events</th>
+        <th>Malicious Events</th>
       </tr>
       <tr>
-        <td style="text-align:left">Observations</td>
-        <td style="text-align:left">{norm_count:,}</td>
-        <td style="text-align:left">{mal_count:,}</td>
+        <td>Observations</td>
+        <td>{norm_count:,}</td>
+        <td>{mal_count:,}</td>
       </tr>
       <tr>
-        <td style="text-align:left">Average</td>
-        <td style="text-align:left">{round(norm_mean, 2):,}</td>
-        <td style="text-align:left">{round(mal_mean, 2):,}</td>
+        <td>Average</td>
+        <td>{round(norm_mean, 2):,}</td>
+        <td>{round(mal_mean, 2):,}</td>
       </tr>
       <tr>
-        <td style="text-align:left">Median</td>
-        <td style="text-align:left">{round(norm_median, 2):,}</td>
-        <td style="text-align:left">{round(mal_median, 2):,}</td>
+        <td>Median</td>
+        <td>{round(norm_median, 2):,}</td>
+        <td>{round(mal_median, 2):,}</td>
       </tr> 
       <tr>
-        <td style="text-align:left">Standard Deviation</td>
-        <td style="text-align:left">{round(norm_stddev, 2):,}</td>
-        <td style="text-align:left">{round(mal_stddev, 2):,}</td>
+        <td>Standard Deviation</td>
+        <td>{round(norm_stddev, 2):,}</td>
+        <td>{round(mal_stddev, 2):,}</td>
       </tr> 
     </table>
     '''
-    title_text = '''
-    <style>
-    custom_1 {
-    color: #EACBBB;
-    font-size: 80px;
-    font-style: bold;
-    font-family: "Helvetica Neue", Helvetica, Roboto, sans-serif;
-    font-weight: 700;
-    }
-    </style>
-    <custom_1>Cream.</custom_1>
-    '''
-    title_div = Div(text=title_text, width=800, height=80, margin=(10,0,50,65))
-    bokeh_objects.append(title_div)
 
-
-    summary_div = Div(text=summary_text, width=900, height=200, align='start', margin=(0, -500, 0, 70))
-    bokeh_objects.append(summary_div)
+    summary_div = Div(text=summary_text, width=470, height=320, margin=(3, 0, -70, 73))
 
     # Results of the hypothetical threshold.
     hypothetical = f'''
-    <h2>"Rule of thumb" hypothetical</h2>
+    <h1>"Rule of thumb" Hypothetical Threshold</h1>
     <p>A threshold at <i>(average + 3x standard deviations)</i> {metric_col} would result in:</p>
     <ul>
         <li>True Positives (correctly identified malicious events: 
@@ -372,8 +436,14 @@ to sanity check results and make your own judgement.
     </ul>
     '''
 
-    hypo_div = Div(text=hypothetical, width=900, height=350, margin=(5,0,0,-600))
-    bokeh_objects.append(hypo_div)
+    hypo_div = Div(text=hypothetical, width=600, height=320, margin=(5, 0, -70, 95))
+
+    line = '''
+    <div class="vertical"></div>
+    '''
+    vertical_line = Div(text=line, width=20, height=320, margin=(80, 0, -70, -10))
+
+    bokeh_objects.append(row(summary_div, vertical_line, hypo_div))
 
     # Let's get the exploratory charts generated.
 
@@ -391,8 +461,8 @@ to sanity check results and make your own judgement.
         'right': normal_edge[1:]
     })
 
-    exploratory = figure(plot_width=800, plot_height=500, sizing_mode='scale_width',
-                         title=f'{metric_col.capitalize()} Distribution',
+    exploratory = figure(plot_width=plot_width, plot_height=plot_height, sizing_mode='fixed',
+                         title=f'{metric_col.capitalize()} Distribution (σ = std dev)',
                          x_axis_label=f'{metric_col.capitalize()}',
                          y_axis_label='Observations'
                          )
@@ -408,33 +478,31 @@ to sanity check results and make your own judgement.
     exploratory.min_border_bottom = bottom_border
 
     exploratory.quad(bottom=0, top=mal_hist_df.metric, left=mal_hist_df.left, right=mal_hist_df.right,
-                     legend_label='malicious', fill_color=malicious_color, alpha=.85)
+                     legend_label='malicious', fill_color=malicious_color, alpha=.85,
+                     line_alpha=.35, line_width=.5)
     exploratory.quad(bottom=0, top=norm_hist_df.metric, left=norm_hist_df.left, right=norm_hist_df.right,
-                     legend_label='normal', fill_color=normal_color, alpha=.35)
+                     legend_label='normal', fill_color=normal_color, alpha=.35,
+                     line_alpha=.35, line_width=.5)
 
     exploratory.add_layout(Arrow(end=NormalHead(fill_color=malicious_color, size=10, line_alpha=0),
                                  line_color=malicious_color, x_start=mal_mean,
                                  y_start=mal_count, x_end=mal_mean, y_end=0))
-    arrow_label = Label(x=mal_mean, y=mal_count * 1.2, text='Malicious Events')
+    arrow_label = Label(x=mal_mean, y=mal_count, y_offset=5,  text='Malicious Events',
+                        text_font_style='bold', text_color=malicious_color, text_font_size='10pt')
 
     exploratory.add_layout(arrow_label)
     exploratory.xaxis.formatter = NumeralTickFormatter(format='0,0')
     exploratory.yaxis.formatter = NumeralTickFormatter(format='0,0')
 
     # 3 sigma reference line
-    thresh = Span(location=threshold_calc(norm_mean, norm_stddev, 3), dimension='height', line_color='grey',
-                  line_dash='dashed', line_width=2)
-    exploratory.add_layout(thresh)
-
-    thresh_label = Label(x=norm_mean + (norm_stddev * 3.05), y=400, y_units='screen',
-                         text='3 Std Dev Threshold', text_font_style='bold')
-    exploratory.add_layout(thresh_label)
+    sigma_ref(exploratory, norm_mean, norm_stddev)
 
     exploratory.legend.location = "top_right"
+    exploratory.legend.background_fill_alpha = .3
     bokeh_objects.append(exploratory)
 
     # Zoomed in version
-    overlap_view = figure(plot_width=800, plot_height=500, sizing_mode='scale_width',
+    overlap_view = figure(plot_width=plot_width, plot_height=plot_height, sizing_mode='fixed',
                           title=f'Overlap Highlight',
                           x_axis_label=f'{metric_col.capitalize()}',
                           y_axis_label='Observations',
@@ -453,22 +521,22 @@ to sanity check results and make your own judgement.
     overlap_view.min_border_bottom = bottom_border
 
     overlap_view.quad(bottom=0, top=mal_hist_df.metric, left=mal_hist_df.left, right=mal_hist_df.right,
-                      legend_label='malicious', fill_color=malicious_color, alpha=.85)
+                      legend_label='malicious', fill_color=malicious_color, alpha=.85,
+                      line_alpha=.35, line_width=.5)
     overlap_view.quad(bottom=0, top=norm_hist_df.metric, left=norm_hist_df.left, right=norm_hist_df.right,
-                      legend_label='normal', fill_color=normal_color, alpha=.35)
+                      legend_label='normal', fill_color=normal_color, alpha=.35,
+                      line_alpha=.35, line_width=.5)
     overlap_view.xaxis.formatter = NumeralTickFormatter(format='0,0')
     overlap_view.yaxis.formatter = NumeralTickFormatter(format='0,0')
 
-    thresh_label = Label(x=threshold_calc(norm_mean, norm_stddev, 3), y=mal_count * .33 * .95,
-                         text='3 Std Dev Threshold')
-    overlap_view.add_layout(thresh)
-    overlap_view.add_layout(thresh_label)
+    sigma_ref(overlap_view, norm_mean, norm_stddev)
 
     overlap_view.legend.location = "top_right"
+    overlap_view.legend.background_fill_alpha = .3
     bokeh_objects.append(overlap_view)
 
-    # Probability Density
-    malicious_hist_dense, malicious_edge_dense = np.histogram(malicious, density=True, bins=33)
+    # Probability Density - bigger bins for sparser malicous observations
+    malicious_hist_dense, malicious_edge_dense = np.histogram(malicious, density=True, bins=50)
     mal_hist_dense_df = pd.DataFrame({
         'metric': malicious_hist_dense,
         'left': malicious_edge_dense[:-1],
@@ -482,7 +550,7 @@ to sanity check results and make your own judgement.
         'right': normal_edge_dense[1:]
     })
 
-    density = figure(plot_width=800, plot_height=500, sizing_mode='scale_width',
+    density = figure(plot_width=plot_width, plot_height=plot_height, sizing_mode='fixed',
                      title='Probability Density',
                      x_axis_label=f'{metric_col.capitalize()}',
                      y_axis_label='% of Group Total'
@@ -499,16 +567,18 @@ to sanity check results and make your own judgement.
     density.min_border_bottom = bottom_border
 
     density.quad(bottom=0, top=mal_hist_dense_df.metric, left=mal_hist_dense_df.left,
-                 right=mal_hist_dense_df.right, legend_label='malicious', fill_color=malicious_color, alpha=.85)
+                 right=mal_hist_dense_df.right, legend_label='malicious', fill_color=malicious_color, alpha=.85,
+                 line_alpha=.35, line_width=.5)
     density.quad(bottom=0, top=norm_hist_dense_df.metric, left=norm_hist_dense_df.left,
-                 right=norm_hist_dense_df.right, legend_label='normal', fill_color=normal_color, alpha=.35)
+                 right=norm_hist_dense_df.right, legend_label='normal', fill_color=normal_color, alpha=.35,
+                 line_alpha=.35, line_width=.5)
     density.xaxis.formatter = NumeralTickFormatter(format='0,0')
     density.yaxis.formatter = NumeralTickFormatter(format='0.000%')
 
-    density.add_layout(thresh)
-    density.add_layout(thresh_label)
+    sigma_ref(density, norm_mean, norm_stddev)
 
     density.legend.location = "top_right"
+    density.legend.background_fill_alpha = .3
     bokeh_objects.append(density)
 
     # Simulation Series to be used
@@ -521,15 +591,12 @@ to sanity check results and make your own judgement.
     f1_max = simulations[simulations.f1_score == simulations.f1_score.max()].head(1).squeeze()['multiplier']
 
     # False Positives vs False Negatives
-    errors = figure(
-        plot_width=800,
-        plot_height=500,
-        sizing_mode='scale_width',
-        x_range=(multiplier.min(), multiplier.max()),
-        y_range=(0, false_positives.max()),
-        title='False Positives vs False Negatives',
-        x_axis_label='Multiplier',
-        y_axis_label='Count'
+    errors = figure(plot_width=plot_width, plot_height=plot_height, sizing_mode='fixed',
+                    x_range=(multiplier.min(), multiplier.max()),
+                    y_range=(0, false_positives.max()),
+                    title='False Positives vs False Negatives',
+                    x_axis_label='Multiplier',
+                    y_axis_label='Count'
     )
 
     errors.title.text_font_size = title_font_size
@@ -555,7 +622,7 @@ to sanity check results and make your own judgement.
     # F1 Score Maximization point
     f1_thresh = Span(location=f1_max, dimension='height', line_color=f1_color,
                      line_dash='dashed', line_width=2)
-    f1_label = Label(x=f1_max + .05, y=200, y_units='screen', text=f'F1 Max: {round(f1_max,2)}',
+    f1_label = Label(x=f1_max + .05, y=180, y_units='screen', text=f'F1 Max: {round(f1_max,2)}',
                      text_font_size='10pt', text_font_style='bold',
                      text_align='left', text_color=f1_color)
 
@@ -563,50 +630,76 @@ to sanity check results and make your own judgement.
     errors.add_layout(f1_label)
 
     errors.legend.location = "top_right"
-    errors.legend.background_fill_alpha = .5
+    errors.legend.background_fill_alpha = .3
     bokeh_objects.append(errors)
 
     # False Negative Weighting.
     # Intro.
     weighting_intro = f'''
-    <p><b>Error types differ in impact</b> - in the case of security incidents, a false negative, 
+    <h3>Error types differ in impact.</h3> 
+    <p>In the case of security incidents, a false negative, 
 though possibly rarer than false positives, is likely more costly. For example, downtime suffered 
 from a DDoS attack (lost sales/customers) incurs more loss than time wasted chasing a false positive 
 (labor hours). </p>
 
-<p>Try playing around with the slider below to see how your thresholding strategy might change 
+<p>Try playing around with the slider to the right to see how your thresholding strategy might need to change 
 depending on the relative weight of false negatives to false positives. What does it look like at
-10:1, 50:1, etc.?</p>
+1:1, 50:1, etc.?</p>
 '''
 
-    weighting_div = Div(text=weighting_intro, width=900, height=100)
+    weighting_div = Div(text=weighting_intro, width=420, height=180, margin=(0, 75, 0, 0))
 
     # Now for the weighted errors viz
 
     default_weighting = 10
+    initial_fp_cost = 100
     simulations['weighted_FN'] = simulations.FN * default_weighting
     weighted_fn = simulations.weighted_FN
     simulations['total_weighted_error'] = simulations.FP + simulations.weighted_FN
     total_weighted_error = simulations.total_weighted_error
+    simulations['fp_cost'] = initial_fp_cost
+    fp_cost = simulations.fp_cost
+    simulations['total_estimated_cost'] = simulations.total_weighted_error * simulations.fp_cost
+    total_estimated_cost = simulations.total_estimated_cost
     twe_min = simulations[simulations.total_weighted_error
                           == simulations.total_weighted_error.min()].head(1).squeeze()['multiplier']
+    twe_min_count = simulations[simulations.multiplier == twe_min].head(1).squeeze()['total_weighted_error']
+    generic_twe = simulations[simulations.multiplier.apply(
+        lambda x: round(x, 2)) == 3.00].squeeze()['total_weighted_error']
 
-    loss_min = ColumnDataSource(data=dict(w=multiplier,
-                                          x=false_positives,
-                                          y=false_negatives,
-                                          z=weighted_fn,
-                                          a=total_weighted_error,
-                                          b=precision,
-                                          c=recall,
-                                          d=f1_score
+    comparison = f'''
+    <p>Based on your inputs, the optimal threshold is around <b>{twe_min}</b>.
+    This would result in an estimated <b>{int(twe_min_count):,}</b> total weighted errors and 
+    <b>${int(twe_min_count * initial_fp_cost):,}</b> in losses.</p>
+
+    <p>The generic threshold of 3.0 standard deviations would result in <b>{int(generic_twe):,}</b> 
+    total weighted errors and <b>${int(generic_twe * initial_fp_cost):,}</b> in losses.</p>
+
+    <p>Using the optimal threshold would save <b>${int((generic_twe - twe_min_count) * initial_fp_cost):,}</b>, 
+    reducing costs by <b>{(generic_twe - twe_min_count) / generic_twe * 100:.1f}%</b> 
+    (assuming near-future events are distributed similarly to those from the past).</p>
+    '''
+    comparison_div = Div(text=comparison, width=420, height=230, margin=(0, 75, 0, 0))
+
+    loss_min = ColumnDataSource(data=dict(multiplier=multiplier,
+                                          fp=false_positives,
+                                          fn=false_negatives,
+                                          weighted_fn=weighted_fn,
+                                          twe=total_weighted_error,
+                                          fpc=fp_cost,
+                                          tec=total_estimated_cost,
+                                          precision=precision,
+                                          recall=recall,
+                                          f1=f1_score
                                           ))
 
     evaluation = Figure(plot_width=900,
-                        plot_height=550,
+                        plot_height=520,
+                        sizing_mode='fixed',
                         x_range=(multiplier.min(), multiplier.max()),
-                        title='Evaluation Metrics vs Weighted Total Error',
+                        title='Evaluation Metrics vs Total Estimated Cost',
                         x_axis_label='Multiplier',
-                        y_axis_label='Errors')
+                        y_axis_label='Cost')
 
     evaluation.title.text_font_size = title_font_size
     evaluation.border_fill_color = cell_bg_color
@@ -618,30 +711,28 @@ depending on the relative weight of false negatives to false positives. What doe
     evaluation.min_border_top = top_border
     evaluation.min_border_bottom = bottom_border
 
-    evaluation.line('w', 'a', source=loss_min, line_width=3, line_alpha=0.6,
-                    color=total_weighted_color, legend_label='Total Weighted Errors')
-    evaluation.yaxis.formatter = NumeralTickFormatter(format='0,0')
+    evaluation.line('multiplier', 'tec', source=loss_min, line_width=3, line_alpha=0.6,
+                    color=total_weighted_color, legend_label='Total Estimated Cost')
+    evaluation.yaxis.formatter = NumeralTickFormatter(format='$0,0')
 
     # Evaluation metrics on second right axis.
     evaluation.extra_y_ranges = {"y2": Range1d(start=0, end=1.1)}
 
     evaluation.add_layout(LinearAxis(y_range_name="y2", axis_label="Score",
                           formatter=NumeralTickFormatter(format='0.00%')), 'right')
-    evaluation.line('w', 'b', source=loss_min, line_width=3, line_alpha=0.6,
+    evaluation.line('multiplier', 'precision', source=loss_min, line_width=3, line_alpha=0.6,
                     color=precision_color, legend_label='Precision', y_range_name="y2")
-    evaluation.line('w', 'c', source=loss_min, line_width=3, line_alpha=0.6,
+    evaluation.line('multiplier', 'recall', source=loss_min, line_width=3, line_alpha=0.6,
                     color=recall_color, legend_label='Recall', y_range_name="y2")
-    evaluation.line('w', 'd', source=loss_min, line_width=3, line_alpha=0.6,
+    evaluation.line('multiplier', 'f1', source=loss_min, line_width=3, line_alpha=0.6,
                     color=f1_color, legend_label='F1 score', y_range_name="y2")
     evaluation.legend.location = "bottom_right"
-
-    slider = Slider(start=1.0, end=1000, value=10, step=.25, title="FN:FP Ratio",
-                    bar_color='#FFD100', height=50, margin=(5, 0, 5, 0))
+    evaluation.legend.background_fill_alpha = .3
 
     twe_thresh = Span(location=twe_min, dimension='height', line_color=total_weighted_color,
                       line_dash='dashed', line_width=2)
     twe_label = Label(x=twe_min - .05, y=240, y_units='screen',
-                      text=f'TWE Min: {round(twe_min,2)}',
+                      text=f'Cost Min: {round(twe_min,2)}',
                       text_font_size='10pt', text_font_style='bold',
                       text_align='right', text_color=total_weighted_color)
     evaluation.add_layout(twe_thresh)
@@ -651,55 +742,154 @@ depending on the relative weight of false negatives to false positives. What doe
     evaluation.add_layout(f1_thresh)
     evaluation.add_layout(f1_label)
 
-
     handler = CustomJS(args=dict(source=loss_min,
                                  thresh=twe_thresh,
-                                 label=twe_label), code="""
-       var data = source.data;
-       var f = cb_obj.value
-       var w = data['w']
-       var x = data['x']
-       var y = data['y']
-       var z = data['z']
-       var a = data['a']
-       for (var i = 0; i < x.length; i++) {
-          z[i] = Math.round(y[i] * f)
-          a[i] = z[i] + x[i]
+                                 label=twe_label,
+                                 comparison=comparison_div), code="""
+       var data = source.data
+       var ratio = cb_obj.value
+       var multiplier = data['multiplier']
+       var fp = data['fp']
+       var fn = data['fn']
+       var weighted_fn = data['weighted_fn']
+       var twe = data['twe']
+       var fpc = data['fpc']
+       var tec = data['tec']
+       var generic_twe = 0
+       
+       function round(value, decimals) {
+       return Number(Math.round(value+'e'+decimals)+'e-'+decimals);
        }
        
-       var min_loss = Math.min.apply(null,a)
+       function comma_sep(x) {
+           return x.toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",");
+       }
+       
+       for (var i = 0; i < multiplier.length; i++) {
+          weighted_fn[i] = Math.round(fn[i] * ratio)
+          twe[i] = weighted_fn[i] + fp[i]
+          tec[i] = twe[i] * fpc[i]
+          if (round(multiplier[i],2) == 3.00) {
+            generic_twe = twe[i]
+          }
+       }
+       
+
+       
+       
+       var min_loss = Math.min.apply(null,twe)
        var new_thresh = 0
        
-       for (var i = 0; i < x.length; i++) {
-       if (a[i] == min_loss) {
-           new_thresh = w[i]
+       for (var i = 0; i < multiplier.length; i++) {
+       if (twe[i] == min_loss) {
+           new_thresh = multiplier[i]
            thresh.location = new_thresh
            thresh.change.emit()
            label.x = new_thresh
-           label.text = `TWE Min: ${new_thresh}`
+           label.text = `Cost Min: ${new_thresh}`
            label.change.emit()
+           comparison.text = `
+            <p>Based on your inputs, the optimal threshold is around <b>${new_thresh}</b>.
+            This would result in an estimated <b>${comma_sep(round(min_loss,0))}</b> total weighted errors and 
+            <b>$${comma_sep(round(min_loss * fpc[i],0))}</b> in losses.</p>
+        
+            <p>The generic threshold of 3.0 standard deviations would result in <b>${comma_sep(round(generic_twe,0))}</b> 
+            total weighted errors and <b>$${comma_sep(round(generic_twe * fpc[i],0))}</b> in losses.</p>
+        
+            <p>Using the optimal threshold would save <b>$${comma_sep(round((generic_twe - min_loss) * fpc[i],0))}</b>, 
+            reducing costs by <b>${comma_sep(round((generic_twe - min_loss) / generic_twe * 100,0))}%</b> 
+            (assuming near-future events are distributed similarly to those from the past).</p>
+           `
+           comparison.change.emit()
+         }
        }
-    }
        source.change.emit();
     """)
+
+    slider = Slider(start=1.0, end=500, value=default_weighting, step=.25, title="FN:FP Ratio",
+                    bar_color='#FFD100', height=50, margin=(5, 0, 5, 0))
     slider.js_on_change('value', handler)
+
+    cost_handler = CustomJS(args=dict(source=loss_min,
+                                      comparison=comparison_div), code="""
+           var data = source.data
+           var new_cost = cb_obj.value
+           var multiplier = data['multiplier']
+           var fp = data['fp']
+           var fn = data['fn']
+           var weighted_fn = data['weighted_fn']
+           var twe = data['twe']
+           var fpc = data['fpc']
+           var tec = data['tec']
+           var generic_twe = 0
+           
+           function round(value, decimals) {
+           return Number(Math.round(value+'e'+decimals)+'e-'+decimals);
+           } 
+
+           function comma_sep(x) {
+               return x.toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",");
+           }
+           
+           for (var i = 0; i < multiplier.length; i++) {
+              fpc[i] = new_cost
+              tec[i] = twe[i] * fpc[i]
+              if (round(multiplier[i],2) == 3.00) {
+                generic_twe = twe[i]
+              }
+           }
+
+           var min_loss = Math.min.apply(null,twe)
+           var new_thresh = 0
+
+           for (var i = 0; i < multiplier.length; i++) {
+           if (twe[i] == min_loss) {
+               new_thresh = multiplier[i]
+               comparison.text = `
+                <p>Based on your inputs, the optimal threshold is around <b>${new_thresh}</b>.
+                This would result in an estimated <b>${comma_sep(round(min_loss,0))}</b> total weighted errors and 
+                <b>$${comma_sep(round(min_loss * new_cost,0))}</b> in losses.</p>
+
+                <p>The generic threshold of 3.0 standard deviations would result in 
+                <b>${comma_sep(round(generic_twe,0))}</b> total weighted errors and 
+                <b>$${comma_sep(round(generic_twe * new_cost,0))}</b> in losses.</p>
+
+                <p>Using the optimal threshold would save 
+                <b>$${comma_sep(round((generic_twe - min_loss) * new_cost,0))}</b>, 
+                reducing costs by <b>${comma_sep(round((generic_twe - min_loss)/generic_twe * 100,0))}%</b> 
+                (assuming near-future events are distributed similarly to those from the past).</p>
+               `
+               comparison.change.emit()
+              }
+           }
+           source.change.emit();
+        """)
+
+    cost_input = TextInput(value=f"{initial_fp_cost}", title="How much a false positive costs:",
+                           height=75, margin=(20, 75, 20, 0))
+    cost_input.js_on_change('value', cost_handler)
 
     # Include DataTable of simulation results
     dt_columns = [
-        TableColumn(field="w", title="Multiplier"),
-        TableColumn(field="x", title="False Positives"),
-        TableColumn(field="y", title="False Negatives"),
-        TableColumn(field="z", title="Weighted False Negatives"),
-        TableColumn(field="a", title="Total Weighted Errors"),
-        TableColumn(field="b", title="Precision", formatter=NumberFormatter(format='0.00%')),
-        TableColumn(field="c", title="Recall", formatter=NumberFormatter(format='0.00%')),
-        TableColumn(field="d", title="F1 Score", formatter=NumberFormatter(format='0.00%')),
+        TableColumn(field="multiplier", title="Multiplier"),
+        TableColumn(field="fp", title="False Positives", formatter=NumberFormatter(format='0,0')),
+        TableColumn(field="fn", title="False Negatives", formatter=NumberFormatter(format='0,0')),
+        TableColumn(field="weighted_fn", title="Weighted False Negatives", formatter=NumberFormatter(format='0,0.00')),
+        TableColumn(field="twe", title="Total Weighted Errors", formatter=NumberFormatter(format='0,0.00')),
+        TableColumn(field="fpc", title="Estimated FP Cost", formatter=NumberFormatter(format='$0,0.00')),
+        TableColumn(field="tec", title="Estimated Total Cost", formatter=NumberFormatter(format='$0,0.00')),
+        TableColumn(field="precision", title="Precision", formatter=NumberFormatter(format='0.00%')),
+        TableColumn(field="recall", title="Recall", formatter=NumberFormatter(format='0.00%')),
+        TableColumn(field="f1", title="F1 Score", formatter=NumberFormatter(format='0.00%')),
     ]
 
-    data_table = DataTable(source=loss_min, columns=dt_columns, width=900, height=400,
-                           fit_columns=True, reorderable=True, sortable=True)
+    data_table = DataTable(source=loss_min, columns=dt_columns, width=1400, height=700, sizing_mode='fixed',
+                           fit_columns=True, reorderable=True, sortable=True, margin = (30, 0, 20, 0))
 
-    weighting_layout = column([weighting_div, evaluation, slider, data_table], sizing_mode='stretch_width')
+    # weighting_layout = column([weighting_div, evaluation, slider, data_table])
+    weighting_layout = column(row(column(weighting_div, cost_input, comparison_div), column(slider, evaluation),
+                                 Div(text='', height=200, width=60)), data_table)
+
     bokeh_objects.append(weighting_layout)
 
     # Initialize visualizations in browser
@@ -708,16 +898,25 @@ depending on the relative weight of false negatives to false positives. What doe
 
     l = grid([
         [bokeh_objects[0]],
-        bokeh_objects[1:3],
-        bokeh_objects[3:5],
-        bokeh_objects[5:7],
-        [bokeh_objects[7]]
+        [bokeh_objects[1]],
+        [row(Div(text='', height=200, width=60), exploratory, Div(text='', height=200, width=10),
+             overlap_view, Div(text='', height=200, width=40))],
+        [Div(text='', height=10, width=200)],
+        [row(Div(text='', height=200, width=60), density, Div(text='', height=200, width=10),
+             errors, Div(text='', height=200, width=40))],
+        [Div(text='', height=10, width=200)],
+        [row(Div(text='', height=200, width=60), weighting_layout, Div(text='', height=200, width=40))],
     ])
+
     #show(column(bokeh_objects))
     #show(l)
     html = file_html(l, CDN, "CREAM")
     with open("render.html", "w") as file:
         file.write(html)
     webbrowser.open("file://" + os.path.realpath("render.html"))
+
+
+if __name__ == "__main__":
+    main()
 
 
