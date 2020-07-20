@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 
-import sys
+import sys, os, shutil, webbrowser
 import time
 import pandas as pd
 import numpy as np
@@ -19,7 +19,6 @@ from bokeh.themes import built_in_themes
 # tools for creating/launching html file
 from bokeh.resources import CDN, INLINE
 from bokeh.embed import file_html
-import webbrowser, os
 
 
 # Declare styling for data viz
@@ -32,7 +31,6 @@ recall_color = '#305db5'
 f1_color = '#8d6295'
 total_weighted_color = '#deb36c'
 title_font_size = '14pt'
-# cell_bg_color = '#e7e7e9'
 cell_bg_color = '#FFFFFF'
 cell_bg_alpha = .35
 plot_bg_alpha = .85
@@ -54,8 +52,6 @@ def file_to_df(path):
     except FileNotFoundError:
         print('We could not find or read your file.')
         print('Please check your relative path.')
-        # Exit script
-        sys.exit()
 
 
 # Let the user enter a number index to avoid spelling errors
@@ -125,7 +121,7 @@ def make_folder(folder_name):
         os.mkdir(session_folder)
         print(f'Created project folder at: {session_folder}')
     else:
-        print('This folder already exists.')
+        print('Warning! This folder already exists. Old files will be overwritten.')
     return session_folder
 
 
@@ -156,9 +152,12 @@ def main():
             - Please label this as 1 or 0 (true or false); 
             This will not work otherwise!
     ''')
+    # Import the dataset
+    imported_data = None
+    while isinstance(imported_data, pd.DataFrame) == False:
+        file_path = input('Enter the path of your dataset: ')
+        imported_data = file_to_df(file_path)
 
-    file_path = input('Enter the path of your dataset: ')
-    imported_data = file_to_df(file_path)
     time.sleep(1)
 
     print(f'''\nGreat! Here is a preview of your data:
@@ -182,8 +181,7 @@ Imported fields:''')
         metric_col, indicator_col = columns_picker(cols)
         col_check = input('Can you confirm if this is correct? (y/n): ').lower()
     else:
-        print('''\nGreat! Thanks for your patience.
-Generating summary stats now..\n''')
+        print('''\nGreat! Thanks for your patience. Generating summary stats now..\n''')
 
     # Generate summary stats.
     time.sleep(1)
@@ -301,22 +299,26 @@ to sanity check results and make your own judgement.
 
     # Now for the fun part..generating the visualizations via Bokeh.
 
-    # List of Bokeh objects to render.
-    bokeh_objects = []
-
     # Header & internal CSS.
     title_text = '''
     <style>
 
     @font-face {
-        font-family: MontrealBold;
-        src: url(fonts/NeueMontreal-Bold.otf);
+        font-family: RobotoBlack;
+        src: url(fonts/Roboto-Black.ttf);
         font-weight: bold;
     }
 
+    
+     @font-face {
+        font-family: RobotoBold;
+        src: url(fonts/Roboto-Bold.ttf);
+        font-weight: bold;
+    }   
+    
     @font-face {
-        font-family: MontrealLight;
-        src: url(fonts/NeueMontreal-Light.otf);
+        font-family: RobotoRegular;
+        src: url(fonts/Roboto-Regular.ttf);
     }
 
     body {
@@ -326,18 +328,19 @@ to sanity check results and make your own judgement.
     title_header {
         font-size: 80px;
         font-style: bold;
-        font-family: MontrealBold, Helvetica;
+        font-family: RobotoBlack, Helvetica;
         font-weight: bold;
         margin-bottom: -200px;
     }
 
-    h1, h3 {
-        font-family: MontrealBold, Helvetica;
+    h1, h2, h3 {
+        font-family: RobotoBlack, Helvetica;
         color: #313596;
     }
 
     p {
         font-size: 12px;
+        font-family: RobotoRegular
     }
 
     b {
@@ -363,7 +366,7 @@ to sanity check results and make your own judgement.
         <title_header style="text-align:left; color: white;">
             Cream.
         </title_header>
-        <p style="font-family: MontrealBold, Helvetica;
+        <p style="font-family: RobotoBold, Helvetica;
         font-size:18px;
         margin-top: 0px;
         margin-left: 5px;">
@@ -373,7 +376,6 @@ to sanity check results and make your own judgement.
     '''
 
     title_div = Div(text=title_text, width=800, height=160, margin=(40, 0, 0, 70))
-    bokeh_objects.append(title_div)
 
     # Summary stats from earlier.
     summary_text = f'''
@@ -425,14 +427,14 @@ to sanity check results and make your own judgement.
         <li>False Negatives (wrongly identified malicious events: 
             <b>{generic_threshold['FN']:,}</b></li>
     </ul>
-    <h3>Accuracy Metrics</h3>
+    <h2>Accuracy Metrics</h2>
     <ul>
         <li>Precision (what % of events above threshold are actually malicious): 
-            <b>{round(generic_threshold['precision'] * 100, 1)}</b></li>
+            <b>{round(generic_threshold['precision'] * 100, 1)}%</b></li>
         <li>Recall (what % of malicious events did we catch): 
-            <b>{round(generic_threshold['recall'] * 100, 1)}</b></li>
+            <b>{round(generic_threshold['recall'] * 100, 1)}%</b></li>
         <li>F1 Score (blends precision and recall): 
-            <b>{round(generic_threshold['f1_score'] * 100, 1)}</b></li>
+            <b>{round(generic_threshold['f1_score'] * 100, 1)}%</b></li>
     </ul>
     '''
 
@@ -442,8 +444,6 @@ to sanity check results and make your own judgement.
     <div class="vertical"></div>
     '''
     vertical_line = Div(text=line, width=20, height=320, margin=(80, 0, -70, -10))
-
-    bokeh_objects.append(row(summary_div, vertical_line, hypo_div))
 
     # Let's get the exploratory charts generated.
 
@@ -499,7 +499,6 @@ to sanity check results and make your own judgement.
 
     exploratory.legend.location = "top_right"
     exploratory.legend.background_fill_alpha = .3
-    bokeh_objects.append(exploratory)
 
     # Zoomed in version
     overlap_view = figure(plot_width=plot_width, plot_height=plot_height, sizing_mode='fixed',
@@ -533,7 +532,6 @@ to sanity check results and make your own judgement.
 
     overlap_view.legend.location = "top_right"
     overlap_view.legend.background_fill_alpha = .3
-    bokeh_objects.append(overlap_view)
 
     # Probability Density - bigger bins for sparser malicous observations
     malicious_hist_dense, malicious_edge_dense = np.histogram(malicious, density=True, bins=50)
@@ -579,7 +577,6 @@ to sanity check results and make your own judgement.
 
     density.legend.location = "top_right"
     density.legend.background_fill_alpha = .3
-    bokeh_objects.append(density)
 
     # Simulation Series to be used
     false_positives = simulations.FP
@@ -631,7 +628,6 @@ to sanity check results and make your own judgement.
 
     errors.legend.location = "top_right"
     errors.legend.background_fill_alpha = .3
-    bokeh_objects.append(errors)
 
     # False Negative Weighting.
     # Intro.
@@ -773,10 +769,7 @@ depending on the relative weight of false negatives to false positives. What doe
             generic_twe = twe[i]
           }
        }
-       
-
-       
-       
+              
        var min_loss = Math.min.apply(null,twe)
        var new_thresh = 0
        
@@ -890,15 +883,12 @@ depending on the relative weight of false negatives to false positives. What doe
     weighting_layout = column(row(column(weighting_div, cost_input, comparison_div), column(slider, evaluation),
                                  Div(text='', height=200, width=60)), data_table)
 
-    bokeh_objects.append(weighting_layout)
-
     # Initialize visualizations in browser
     time.sleep(1.5)
-    #show(column(bokeh_objects))
 
-    l = grid([
-        [bokeh_objects[0]],
-        [bokeh_objects[1]],
+    layout = grid([
+        [title_div],
+        [row(summary_div, vertical_line, hypo_div)],
         [row(Div(text='', height=200, width=60), exploratory, Div(text='', height=200, width=10),
              overlap_view, Div(text='', height=200, width=40))],
         [Div(text='', height=10, width=200)],
@@ -908,12 +898,14 @@ depending on the relative weight of false negatives to false positives. What doe
         [row(Div(text='', height=200, width=60), weighting_layout, Div(text='', height=200, width=40))],
     ])
 
-    #show(column(bokeh_objects))
-    #show(l)
-    html = file_html(l, INLINE, "CREAM")
-    with open("render.html", "w") as file:
+    # Generate html resources for dashboard
+    fonts = os.path.join(os.getcwd(), 'fonts')
+    shutil.copytree(fonts, os.path.join(session_folder, 'fonts'))
+
+    html = file_html(layout, INLINE, "Cream")
+    with open(os.path.join(session_folder, f'{session_name}.html'), "w") as file:
         file.write(html)
-    webbrowser.open("file://" + os.path.realpath("render.html"))
+    webbrowser.open("file://" + os.path.join(session_folder, f'{session_name}.html'))
 
 
 if __name__ == "__main__":
