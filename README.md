@@ -37,7 +37,9 @@ While this might catch outliers, you may also find this threshold generating muc
 - Non-normal (not perfectly bell-shaped) distributions - this happens often in the wild.
 - Sample proportions: even if sample points outside 3 standard deviations are improbable, they are still possible. With malicious events being rarer than normal ones, false positives might still be predominant above our threshold.
 
-If we find ourselves stuck in that scenario, it would not be very efficient or effective to just keep nudging our threshold up until we don't have any more false positives - we might end up filtering out the real malicious events instead!
+False positives are not just annoyances - they produce actual business costs by distracting from more important things, such as other rbeaches that could be occurring.
+
+If we find ourselves stuck in this scenario, it would not be very efficient or effective to just keep nudging our threshold up until we don't have any more false positives - we might end up filtering out the real malicious events instead!
 
 So how do we go about solving this problem?
 
