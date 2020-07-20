@@ -41,7 +41,7 @@ If we find ourselves stuck in that scenario, it would not be very efficient or e
 
 So how do we go about solving this problem?
 
-![confused]('https://media.giphy.com/media/WRQBXSCnEFJIuxktnw/giphy.gif')
+![confused](https://media.giphy.com/media/WRQBXSCnEFJIuxktnw/giphy.gif)
 
 ## **Our solution**
 There are three metrics that help us evaluate the efficacy of a threshold:
@@ -57,23 +57,23 @@ It's not perfect as the future may not entirely conform to the past, but certain
 
 When the script finishes running, it will open up an HTML dashboard summarizing your data and the simulations that were ran.
 
-![overview]('images/overview.png')
+![overview](images/overview.png)
 
 Some summary stats describing the normal and malicious samples, as well as the hypothetical results of the generically prescribed threshold at 3 standard deviations.
 
-![distributions]('images/distributions.png')
+![distributions](images/distributions.png)
 
 A view of how the normal vs malicious data are distributed. If they are close in proximity and show a fair amount of overlap, it is possible that this metric is not the best signal to place a threshold on.
 
-![density]('images/density.png')
+![density](images/density.png)
 
 A plot of the 'probability density' of the distributions. This shows the percentage of the sample that falls under a particular bin (area of the rectangle).
 
-![errors]('images/errors.png')
+![errors](images/errors.png)
 
 A high-level view of how false positive and false negative counts change alongside the standard deviation multiplier.
 
-![sensitivity]('images/sensitivity.png')
+![sensitivity](images/sensitivity.png)
 
 Here we can apply additional nuance with your own business context:
 - Move the slider to indicate how much more costly a false negative is compared to a false positive.
