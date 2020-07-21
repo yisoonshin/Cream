@@ -900,7 +900,11 @@ depending on the relative weight of false negatives to false positives. What doe
 
     # Generate html resources for dashboard
     fonts = os.path.join(os.getcwd(), 'fonts')
-    shutil.copytree(fonts, os.path.join(session_folder, 'fonts'))
+    if os.path.isdir(os.path.join(session_folder, 'fonts')):
+        shutil.rmtree(os.path.join(session_folder, 'fonts'))
+        shutil.copytree(fonts, os.path.join(session_folder, 'fonts'))
+    else:
+        shutil.copytree(fonts, os.path.join(session_folder, 'fonts'))
 
     html = file_html(layout, INLINE, "Cream")
     with open(os.path.join(session_folder, f'{session_name}.html'), "w") as file:
